@@ -88,3 +88,4 @@ describe('RequireRole Route Guard', () => {
     expect(screen.getByText(/page not found or access restricted/i)).toBeInTheDocument();
   });
 });
+

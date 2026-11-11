@@ -14,6 +14,7 @@ import { GuestHousePage } from '@/features/guesthouse/GuestHousePage';
 import { ParkingPage } from '@/features/parking/ParkingPage';
 import { BookingWizardPage } from '@/features/wizard/BookingWizardPage';
 import { MyBookingsPage } from '@/features/bookings/MyBookingsPage';
+import { AgentChatPage } from '@/features/agent/AgentChatPage';
 import { ApprovalQueuePage } from '@/features/admin/ApprovalQueuePage';
 import { TimetableUploadPage } from '@/features/admin/TimetableUploadPage';
 import { MasterDataPage } from '@/features/admin/MasterDataPage';
@@ -130,10 +131,7 @@ export default function App() {
                 element={
                   <RequireRole>
                     <AppLayout>
-                      <div className="mx-auto max-w-7xl p-8">
-                        <h1 className="font-heading text-2xl font-bold">CampusFlow AI Agent</h1>
-                        <p className="mt-2 text-sm text-text-body/70">Agent Chat module loading in Phase 4.</p>
-                      </div>
+                      <AgentChatPage />
                     </AppLayout>
                   </RequireRole>
                 }

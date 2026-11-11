@@ -33,3 +33,4 @@ export function NotFoundOrForbidden() {
     </div>
   );
 }
+
