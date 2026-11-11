@@ -1,9 +1,11 @@
 import { apiClient } from './client';
 import {
+  ApproveBookingRequestSchema,
   Booking,
   BookingSchema,
   PaginatedBookingsResponse,
   PaginatedBookingsResponseSchema,
+  RejectBookingRequestSchema,
 } from './types';
 
 export interface TimetableUploadResponse {
@@ -41,17 +43,19 @@ export const adminApi = {
   },
 
   approveBooking: async (bookingId: string, note?: string): Promise<Booking> => {
+    const payload = ApproveBookingRequestSchema.parse({ note });
     return apiClient<Booking>(`/admin/approvals/${bookingId}/approve`, {
       method: 'POST',
-      body: JSON.stringify({ note }),
+      body: JSON.stringify(payload),
       schema: BookingSchema,
     });
   },
 
   rejectBooking: async (bookingId: string, reason: string): Promise<Booking> => {
+    const payload = RejectBookingRequestSchema.parse({ reason });
     return apiClient<Booking>(`/admin/approvals/${bookingId}/reject`, {
       method: 'POST',
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify(payload),
       schema: BookingSchema,
     });
   },

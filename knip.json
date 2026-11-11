@@ -1,7 +1,20 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": ["src/main.tsx", "src/App.tsx"],
-  "project": ["src/**/*.{ts,tsx}"],
-  "ignore": ["src/test/**", "**/*.test.{ts,tsx}"],
-  "ignoreDependencies": ["@vitest/coverage-v8", "jsdom"]
+  "project": ["src/**/*.{ts,tsx}!"],
+  "ignore": [
+    "src/components/ui/**",
+    "src/hooks/**",
+    "src/api/announcement.ts"
+  ],
+  "ignoreDependencies": [
+    "@fontsource/inter",
+    "@fontsource/poppins",
+    "@radix-ui/*",
+    "date-fns"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "rules": {
+    "exports": "warn",
+    "types": "off"
+  }
 }

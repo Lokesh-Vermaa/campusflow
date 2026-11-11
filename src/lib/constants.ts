@@ -44,18 +44,3 @@ export const DEFAULT_ANNOUNCEMENT = {
   linkText: 'Book Now',
   linkHref: '/venues',
 };
-
-// Floating dock items
-export const FLOATING_DOCK_ITEMS = [
-  { label: 'Ask Agent', sublabel: 'AI Assistant', href: '/agent', icon: 'MessageCircle' },
-  { label: 'New Booking', sublabel: 'Reserve Space', href: '/bookings/new', icon: 'PlusCircle' },
-  { label: 'Find a Room', sublabel: 'Quick Search', href: '/find-room', icon: 'Search' },
-] as const;
-
-// Bottom nav items
-export const BOTTOM_NAV_ITEMS = [
-  { label: 'Home', href: '/dashboard', icon: 'Home' },
-  { label: 'Find Room', href: '/find-room', icon: 'Search' },
-  { label: 'Bookings', href: '/my-bookings', icon: 'Calendar' },
-  { label: 'Profile', href: '/profile', icon: 'User' },
-] as const;
