@@ -1,0 +1,65 @@
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/poppins/400.css';
+@import '@fontsource/poppins/600.css';
+@import '@fontsource/poppins/700.css';
+
+:root {
+  --brand-periwinkle: #6b87c9;
+  --brand-periwinkle-deep: #4a67b0;
+  --brand-azure: #0096ff;
+  --brand-azure-strong: #0069c9;
+  --brand-orange: #ff6b00;
+  --brand-orange-ink: #c74a00;
+  --text-heading: #111827;
+  --text-body: #212529;
+  --surface: #ffffff;
+  --surface-alt: #f7f7f7;
+  --border: #e5e7eb;
+  --gradient-heading: linear-gradient(90deg, #2e86de 0%, #b9774f 100%);
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .gradient-heading {
+    background: var(--gradient-heading);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: var(--brand-azure-strong); /* fallback */
+  }
+
+  @media (forced-colors: active) {
+    .gradient-heading {
+      -webkit-text-fill-color: unset;
+      background: none;
+      color: var(--brand-azure-strong);
+    }
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--text-body);
+    background-color: var(--surface);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Poppins', system-ui, sans-serif;
+    color: var(--text-heading);
+  }
+}
