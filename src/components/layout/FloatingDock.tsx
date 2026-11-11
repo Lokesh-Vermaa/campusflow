@@ -13,13 +13,13 @@ const dockItems = [
   {
     label: 'New Booking',
     sublabel: 'Reserve Space',
-    href: '/bookings/new',
+    href: '/wizard',
     Icon: PlusCircle,
   },
   {
     label: 'Find a Room',
     sublabel: 'Quick Search',
-    href: '/find-room',
+    href: '/finder',
     Icon: Search,
   },
 ];

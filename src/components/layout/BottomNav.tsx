@@ -4,9 +4,9 @@ import { cn } from '@/lib/cn';
 
 const navItems = [
   { label: 'Home', href: '/dashboard', Icon: Home },
-  { label: 'Find Room', href: '/find-room', Icon: Search },
-  { label: 'Bookings', href: '/my-bookings', Icon: Calendar },
-  { label: 'Profile', href: '/profile', Icon: User },
+  { label: 'Find Room', href: '/finder', Icon: Search },
+  { label: 'Bookings', href: '/bookings', Icon: Calendar },
+  { label: 'Venues', href: '/venues', Icon: User },
 ];
 
 export function BottomNav() {

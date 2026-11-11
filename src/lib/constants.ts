@@ -1,13 +1,13 @@
 // Navigation items
 export const NAV_ITEMS = [
   { label: 'DASHBOARD', href: '/dashboard', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
-  { label: 'FIND A ROOM', href: '/find-room', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
+  { label: 'FIND A ROOM', href: '/finder', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
   { label: 'VENUES', href: '/venues', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
-  { label: 'GUEST HOUSE', href: '/guest-house', roles: ['STAFF', 'ADMIN'] },
+  { label: 'GUEST HOUSE', href: '/guesthouse', roles: ['STAFF', 'ADMIN'] },
   { label: 'PARKING', href: '/parking', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
-  { label: 'MY BOOKINGS', href: '/my-bookings', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
+  { label: 'MY BOOKINGS', href: '/bookings', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
   { label: 'AGENT', href: '/agent', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
-  { label: 'ADMIN', href: '/admin', roles: ['ADMIN'] },
+  { label: 'ADMIN', href: '/admin/approvals', roles: ['ADMIN'] },
 ] as const;
 
 // User roles

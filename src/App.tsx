@@ -7,6 +7,13 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { RequireRole } from '@/features/auth/RequireRole';
 import { NotFoundOrForbidden } from '@/features/common/NotFoundOrForbidden';
+import { DashboardPage } from '@/features/dashboard/DashboardPage';
+import { FinderPage } from '@/features/finder/FinderPage';
+import { VenuesPage } from '@/features/venues/VenuesPage';
+import { GuestHousePage } from '@/features/guesthouse/GuestHousePage';
+import { ParkingPage } from '@/features/parking/ParkingPage';
+import { BookingWizardPage } from '@/features/wizard/BookingWizardPage';
+import { MyBookingsPage } from '@/features/bookings/MyBookingsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,9 +48,7 @@ export default function App() {
                 element={
                   <RequireRole>
                     <AppLayout>
-                      <div className="mx-auto max-w-7xl p-6">
-                        <h1 className="font-heading text-2xl font-bold">Dashboard</h1>
-                      </div>
+                      <DashboardPage />
                     </AppLayout>
                   </RequireRole>
                 }
@@ -54,9 +59,7 @@ export default function App() {
                 element={
                   <RequireRole>
                     <AppLayout>
-                      <div className="mx-auto max-w-7xl p-6">
-                        <h1 className="font-heading text-2xl font-bold">Find a Room</h1>
-                      </div>
+                      <FinderPage />
                     </AppLayout>
                   </RequireRole>
                 }
@@ -67,9 +70,7 @@ export default function App() {
                 element={
                   <RequireRole>
                     <AppLayout>
-                      <div className="mx-auto max-w-7xl p-6">
-                        <h1 className="font-heading text-2xl font-bold">Venues & Labs</h1>
-                      </div>
+                      <VenuesPage />
                     </AppLayout>
                   </RequireRole>
                 }
@@ -80,9 +81,7 @@ export default function App() {
                 element={
                   <RequireRole roles={['STAFF', 'ADMIN']}>
                     <AppLayout>
-                      <div className="mx-auto max-w-7xl p-6">
-                        <h1 className="font-heading text-2xl font-bold">MDC Guest House</h1>
-                      </div>
+                      <GuestHousePage />
                     </AppLayout>
                   </RequireRole>
                 }
@@ -93,22 +92,7 @@ export default function App() {
                 element={
                   <RequireRole>
                     <AppLayout>
-                      <div className="mx-auto max-w-7xl p-6">
-                        <h1 className="font-heading text-2xl font-bold">Visitor Parking</h1>
-                      </div>
-                    </AppLayout>
-                  </RequireRole>
-                }
-              />
-
-              <Route
-                path="/bookings"
-                element={
-                  <RequireRole>
-                    <AppLayout>
-                      <div className="mx-auto max-w-7xl p-6">
-                        <h1 className="font-heading text-2xl font-bold">My Bookings</h1>
-                      </div>
+                      <ParkingPage />
                     </AppLayout>
                   </RequireRole>
                 }
@@ -119,9 +103,18 @@ export default function App() {
                 element={
                   <RequireRole>
                     <AppLayout>
-                      <div className="mx-auto max-w-7xl p-6">
-                        <h1 className="font-heading text-2xl font-bold">New Booking Wizard</h1>
-                      </div>
+                      <BookingWizardPage />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
+
+              <Route
+                path="/bookings"
+                element={
+                  <RequireRole>
+                    <AppLayout>
+                      <MyBookingsPage />
                     </AppLayout>
                   </RequireRole>
                 }
@@ -132,22 +125,24 @@ export default function App() {
                 element={
                   <RequireRole>
                     <AppLayout>
-                      <div className="mx-auto max-w-7xl p-6">
-                        <h1 className="font-heading text-2xl font-bold">CampusFlow Agent</h1>
+                      <div className="mx-auto max-w-7xl p-8">
+                        <h1 className="font-heading text-2xl font-bold">CampusFlow AI Agent</h1>
+                        <p className="mt-2 text-sm text-text-body/70">Agent Chat module loading in Phase 4.</p>
                       </div>
                     </AppLayout>
                   </RequireRole>
                 }
               />
 
-              {/* Admin Only Routes */}
+              {/* Admin Console Placeholder (Phase 3) */}
               <Route
                 path="/admin/*"
                 element={
                   <RequireRole roles={['ADMIN']}>
                     <AppLayout>
-                      <div className="mx-auto max-w-7xl p-6">
+                      <div className="mx-auto max-w-7xl p-8">
                         <h1 className="font-heading text-2xl font-bold">Admin Console</h1>
+                        <p className="mt-2 text-sm text-text-body/70">Admin features loading in Phase 3.</p>
                       </div>
                     </AppLayout>
                   </RequireRole>
