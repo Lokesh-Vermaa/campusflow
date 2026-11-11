@@ -14,6 +14,11 @@ import { GuestHousePage } from '@/features/guesthouse/GuestHousePage';
 import { ParkingPage } from '@/features/parking/ParkingPage';
 import { BookingWizardPage } from '@/features/wizard/BookingWizardPage';
 import { MyBookingsPage } from '@/features/bookings/MyBookingsPage';
+import { ApprovalQueuePage } from '@/features/admin/ApprovalQueuePage';
+import { TimetableUploadPage } from '@/features/admin/TimetableUploadPage';
+import { MasterDataPage } from '@/features/admin/MasterDataPage';
+import { AuditLogPage } from '@/features/admin/AuditLogPage';
+import { ReportsPage } from '@/features/admin/ReportsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -134,16 +139,53 @@ export default function App() {
                 }
               />
 
-              {/* Admin Console Placeholder (Phase 3) */}
+              {/* Admin Routes */}
               <Route
-                path="/admin/*"
+                path="/admin/approvals"
                 element={
                   <RequireRole roles={['ADMIN']}>
                     <AppLayout>
-                      <div className="mx-auto max-w-7xl p-8">
-                        <h1 className="font-heading text-2xl font-bold">Admin Console</h1>
-                        <p className="mt-2 text-sm text-text-body/70">Admin features loading in Phase 3.</p>
-                      </div>
+                      <ApprovalQueuePage />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/admin/timetable"
+                element={
+                  <RequireRole roles={['ADMIN']}>
+                    <AppLayout>
+                      <TimetableUploadPage />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/admin/master"
+                element={
+                  <RequireRole roles={['ADMIN']}>
+                    <AppLayout>
+                      <MasterDataPage />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/admin/audit"
+                element={
+                  <RequireRole roles={['ADMIN']}>
+                    <AppLayout>
+                      <AuditLogPage />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/admin/reports"
+                element={
+                  <RequireRole roles={['ADMIN']}>
+                    <AppLayout>
+                      <ReportsPage />
                     </AppLayout>
                   </RequireRole>
                 }
