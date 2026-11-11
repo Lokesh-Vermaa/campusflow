@@ -12,7 +12,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      setScrolled(window.scrollY > 80);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -22,7 +22,9 @@ export function PublicLayout({ children }: PublicLayoutProps) {
   return (
     <div className="flex min-h-screen flex-col">
       <SkipLink />
-      <Header variant={scrolled ? 'solid' : 'transparent'} />
+      <div className="fixed top-0 left-0 right-0 z-40">
+        <Header variant={scrolled ? 'solid' : 'transparent'} />
+      </div>
       <main id="main-content" className="flex-1">
         {children}
       </main>

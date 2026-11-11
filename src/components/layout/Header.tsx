@@ -1,33 +1,49 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Bell,
   Search,
   Menu,
   X,
   ChevronDown,
-  User,
+  User as UserIcon,
   LogOut,
-  Settings,
   HelpCircle,
+  Shield,
 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Logo } from '@/components/ui/Logo';
 import { cn } from '@/lib/cn';
 import { NAV_ITEMS } from '@/lib/constants';
+import { useAuth } from '@/features/auth/useAuth';
 
 interface HeaderProps {
   variant: 'transparent' | 'solid';
 }
 
-const PRIMARY_NAV = NAV_ITEMS.filter((item) => item.label !== 'ADMIN');
-
 export function Header({ variant }: HeaderProps) {
+  const { user, logout, hasRole } = useAuth();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isTransparent = variant === 'transparent';
 
-  const navTextClass = isTransparent ? 'text-white hover:text-white/80' : 'text-text-heading hover:text-brand-azure-strong';
+  const navTextClass = isTransparent
+    ? 'text-white hover:text-white/80'
+    : 'text-text-heading hover:text-brand-azure-strong';
   const headerBg = isTransparent ? 'bg-transparent' : 'bg-surface shadow-sm';
+
+  // Filter nav items based on user role
+  const navItems = NAV_ITEMS.filter((item) => {
+    if (item.label === 'ADMIN') {
+      return hasRole('ADMIN');
+    }
+    return true;
+  });
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   return (
     <>
@@ -75,39 +91,44 @@ export function Header({ variant }: HeaderProps) {
                   )}
                   aria-label="Profile menu"
                 >
-                  <User className="h-4 w-4" aria-hidden="true" />
-                  <span className="hidden lg:inline">My Account</span>
+                  <UserIcon className="h-4 w-4" aria-hidden="true" />
+                  <span className="hidden lg:inline">{user?.name || 'My Account'}</span>
+                  {user && (
+                    <span className="rounded bg-brand-azure/20 px-1.5 py-0.2 text-[10px] font-bold text-brand-azure-strong">
+                      {user.role}
+                    </span>
+                  )}
                   <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>
                 <DropdownMenu.Content
-                  className="z-50 min-w-[160px] rounded-md border border-border-color bg-surface p-1 shadow-lg"
+                  className="z-50 min-w-[180px] rounded-md border border-border-color bg-surface p-1 shadow-lg"
                   sideOffset={5}
                 >
-                  <DropdownMenu.Item asChild>
-                    <Link
-                      to="/profile"
-                      className="flex cursor-pointer items-center gap-2 rounded px-3 py-2 text-sm text-text-body outline-none hover:bg-surface-alt focus:bg-surface-alt"
-                    >
-                      <User className="h-4 w-4" aria-hidden="true" />
-                      Profile
-                    </Link>
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item asChild>
-                    <Link
-                      to="/settings"
-                      className="flex cursor-pointer items-center gap-2 rounded px-3 py-2 text-sm text-text-body outline-none hover:bg-surface-alt focus:bg-surface-alt"
-                    >
-                      <Settings className="h-4 w-4" aria-hidden="true" />
-                      Settings
-                    </Link>
-                  </DropdownMenu.Item>
+                  {user && (
+                    <div className="border-b border-border-color px-3 py-2 text-xs">
+                      <p className="font-semibold text-text-heading">{user.name}</p>
+                      <p className="truncate text-text-body/60">{user.email}</p>
+                    </div>
+                  )}
+                  {hasRole('ADMIN') && (
+                    <DropdownMenu.Item asChild>
+                      <Link
+                        to="/admin/approvals"
+                        className="flex cursor-pointer items-center gap-2 rounded px-3 py-2 text-sm text-text-body outline-none hover:bg-surface-alt focus:bg-surface-alt"
+                      >
+                        <Shield className="h-4 w-4 text-brand-azure-strong" aria-hidden="true" />
+                        Admin Queue
+                      </Link>
+                    </DropdownMenu.Item>
+                  )}
                   <DropdownMenu.Separator className="my-1 h-px bg-border-color" />
                   <DropdownMenu.Item asChild>
                     <button
                       type="button"
-                      className="flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-sm text-text-body outline-none hover:bg-surface-alt focus:bg-surface-alt"
+                      onClick={handleLogout}
+                      className="flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-sm text-red-600 outline-none hover:bg-red-50 focus:bg-red-50"
                     >
                       <LogOut className="h-4 w-4" aria-hidden="true" />
                       Sign Out
@@ -126,7 +147,7 @@ export function Header({ variant }: HeaderProps) {
             </button>
 
             <Link
-              to="/bookings/new"
+              to="/wizard"
               className="rounded bg-brand-orange px-3 py-1 text-xs font-bold tracking-wide text-text-heading hover:bg-brand-orange-ink hover:text-white focus-visible:outline focus-visible:outline-2"
             >
               NEW BOOKING
@@ -135,13 +156,13 @@ export function Header({ variant }: HeaderProps) {
 
           {/* Main nav row */}
           <div className="flex items-center gap-4 px-4 py-3">
-            <Link to="/" aria-label="Go to homepage">
+            <Link to="/dashboard" aria-label="Go to homepage">
               <Logo variant={isTransparent ? 'light' : 'color'} />
             </Link>
 
             {/* Desktop nav */}
             <nav aria-label="Main navigation" className="ml-6 hidden items-center gap-1 md:flex">
-              {PRIMARY_NAV.map((item) => (
+              {navItems.map((item) => (
                 <Link
                   key={item.label}
                   to={item.href}

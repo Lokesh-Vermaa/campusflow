@@ -7,7 +7,7 @@ import jsxA11y from 'eslint-plugin-jsx-a11y';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', '.knip'] },
+  { ignores: ['dist', 'coverage', '.knip', 'public/**'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
@@ -34,7 +34,7 @@ export default tseslint.config(
           message: 'dangerouslySetInnerHTML is forbidden. Use react-markdown with rehype-sanitize instead.',
         },
       ],
-      'no-console': 'warn',
+      'no-console': ['warn', { allow: ['error', 'warn'] }],
     },
   },
 );
