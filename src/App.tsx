@@ -38,7 +38,6 @@ export default function App() {
           <BrowserRouter>
             <Routes>
               {/* Public Routes */}
-              <Route path="/" element={<Navigate to="/login" replace />} />
               <Route
                 path="/login"
                 element={
@@ -48,9 +47,31 @@ export default function App() {
                 }
               />
 
-              {/* Authenticated Routes wrapped in AppLayout and RequireRole */}
+              {/* Chat-First Home (`/`) and Existing Conversations (`/c/:conversationId`) */}
               <Route
-                path="/dashboard"
+                path="/"
+                element={
+                  <RequireRole>
+                    <AppLayout>
+                      <AgentChatPage />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/c/:conversationId"
+                element={
+                  <RequireRole>
+                    <AppLayout>
+                      <AgentChatPage />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
+
+              {/* Workspace Routes */}
+              <Route
+                path="/overview"
                 element={
                   <RequireRole>
                     <AppLayout>
@@ -59,9 +80,10 @@ export default function App() {
                   </RequireRole>
                 }
               />
+              <Route path="/dashboard" element={<Navigate to="/overview" replace />} />
 
               <Route
-                path="/finder"
+                path="/rooms"
                 element={
                   <RequireRole>
                     <AppLayout>
@@ -70,6 +92,7 @@ export default function App() {
                   </RequireRole>
                 }
               />
+              <Route path="/finder" element={<Navigate to="/rooms" replace />} />
 
               <Route
                 path="/venues"
@@ -83,7 +106,7 @@ export default function App() {
               />
 
               <Route
-                path="/guesthouse"
+                path="/guest-house"
                 element={
                   <RequireRole roles={['STAFF', 'ADMIN']}>
                     <AppLayout>
@@ -92,6 +115,7 @@ export default function App() {
                   </RequireRole>
                 }
               />
+              <Route path="/guesthouse" element={<Navigate to="/guest-house" replace />} />
 
               <Route
                 path="/parking"
@@ -99,17 +123,6 @@ export default function App() {
                   <RequireRole>
                     <AppLayout>
                       <ParkingPage />
-                    </AppLayout>
-                  </RequireRole>
-                }
-              />
-
-              <Route
-                path="/wizard"
-                element={
-                  <RequireRole>
-                    <AppLayout>
-                      <BookingWizardPage />
                     </AppLayout>
                   </RequireRole>
                 }
@@ -125,19 +138,22 @@ export default function App() {
                   </RequireRole>
                 }
               />
+              <Route path="/my-bookings" element={<Navigate to="/bookings" replace />} />
 
               <Route
-                path="/agent"
+                path="/bookings/new"
                 element={
                   <RequireRole>
                     <AppLayout>
-                      <AgentChatPage />
+                      <BookingWizardPage />
                     </AppLayout>
                   </RequireRole>
                 }
               />
+              <Route path="/wizard" element={<Navigate to="/bookings/new" replace />} />
+              <Route path="/agent" element={<Navigate to="/" replace />} />
 
-              {/* Admin Routes */}
+              {/* Admin-only Routes */}
               <Route
                 path="/admin/approvals"
                 element={
@@ -159,7 +175,7 @@ export default function App() {
                 }
               />
               <Route
-                path="/admin/master"
+                path="/admin/master-data"
                 element={
                   <RequireRole roles={['ADMIN']}>
                     <AppLayout>
@@ -168,6 +184,7 @@ export default function App() {
                   </RequireRole>
                 }
               />
+              <Route path="/admin/master" element={<Navigate to="/admin/master-data" replace />} />
               <Route
                 path="/admin/audit"
                 element={

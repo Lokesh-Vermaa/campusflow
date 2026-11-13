@@ -1,13 +1,21 @@
-// Navigation items
-export const NAV_ITEMS = [
-  { label: 'DASHBOARD', href: '/dashboard', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
-  { label: 'FIND A ROOM', href: '/finder', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
-  { label: 'VENUES', href: '/venues', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
-  { label: 'GUEST HOUSE', href: '/guesthouse', roles: ['STAFF', 'ADMIN'] },
-  { label: 'PARKING', href: '/parking', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
-  { label: 'MY BOOKINGS', href: '/bookings', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
-  { label: 'AGENT', href: '/agent', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
-  { label: 'ADMIN', href: '/admin/approvals', roles: ['ADMIN'] },
+// Workspace navigation items
+export const WORKSPACE_NAV_ITEMS = [
+  { label: 'Chat', href: '/', icon: 'MessageSquare', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
+  { label: 'Find a Room', href: '/rooms', icon: 'Search', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
+  { label: 'Venues & Labs', href: '/venues', icon: 'Building2', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
+  { label: 'Guest House', href: '/guest-house', icon: 'Home', roles: ['STAFF', 'ADMIN'] },
+  { label: 'Parking', href: '/parking', icon: 'Car', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
+  { label: 'My Bookings', href: '/bookings', icon: 'Calendar', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
+  { label: 'Overview', href: '/overview', icon: 'LayoutDashboard', roles: ['STUDENT', 'STAFF', 'ADMIN'] },
+] as const;
+
+// Admin navigation items
+export const ADMIN_NAV_ITEMS = [
+  { label: 'Approvals', href: '/admin/approvals', icon: 'CheckSquare', roles: ['ADMIN'], badge: true },
+  { label: 'Timetable Upload', href: '/admin/timetable', icon: 'UploadCloud', roles: ['ADMIN'] },
+  { label: 'Master Data', href: '/admin/master-data', icon: 'Database', roles: ['ADMIN'] },
+  { label: 'Audit Log', href: '/admin/audit', icon: 'ShieldAlert', roles: ['ADMIN'] },
+  { label: 'Reports', href: '/admin/reports', icon: 'BarChart3', roles: ['ADMIN'] },
 ] as const;
 
 // User roles
@@ -37,10 +45,3 @@ export const RESOURCE_TYPES = {
 } as const;
 
 export type ResourceType = (typeof RESOURCE_TYPES)[keyof typeof RESOURCE_TYPES];
-
-// Announcement (static — Phase 1 will fetch from API)
-export const DEFAULT_ANNOUNCEMENT = {
-  message: 'Seminar Hall bookings are now open for the upcoming AI Buildathon.',
-  linkText: 'Book Now',
-  linkHref: '/venues',
-};

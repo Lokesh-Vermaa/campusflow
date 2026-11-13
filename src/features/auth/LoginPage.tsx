@@ -61,7 +61,7 @@ export function LoginPage() {
     setAuthError(null);
     try {
       await login(data);
-      const destination = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/dashboard';
+      const destination = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/';
       navigate(destination, { replace: true });
     } catch {
       const newFails = failedAttempts + 1;
@@ -87,48 +87,29 @@ export function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-surface-alt">
-      {/* Full-bleed Hero Band */}
-      <section
-        className="relative overflow-hidden px-4 pb-28 pt-32 sm:px-6 lg:px-8"
-        style={{
-          background: 'linear-gradient(135deg, var(--brand-periwinkle-deep) 0%, var(--brand-azure-strong) 100%)',
-        }}
-        aria-label="Welcome to JKLU CampusFlow"
-      >
-        {/* Subtle geometric pattern overlay */}
-        <div
-          className="pointer-events-none absolute inset-0 opacity-10"
-          style={{
-            backgroundImage:
-              'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-            backgroundSize: '24px 24px',
-          }}
-          aria-hidden="true"
-        />
-
-        <div className="relative mx-auto max-w-5xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3.5 py-1 text-xs font-semibold tracking-wide text-white backdrop-blur-sm">
-            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-            JKLU AI-Buildathon 1.0 (PS-02)
-          </div>
-
-          <h1 className="mt-4 font-heading text-3xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
-            JKLU CampusFlow
-          </h1>
-
-          <p className="mx-auto mt-4 max-w-2xl text-base text-white/90 sm:text-lg">
-            AI-agent-powered campus venue, guest house, and parking management system. Seamless,
-            conflict-free scheduling for faculty, student clubs, and campus staff.
-          </p>
+    <div className="min-h-screen bg-surface-alt px-4 py-12 sm:px-6 lg:px-8">
+      {/* Clean Brand Header */}
+      <div className="mx-auto max-w-4xl text-center">
+        <div className="inline-flex items-center gap-2 rounded-full border border-border-color bg-surface px-3.5 py-1 text-xs font-semibold tracking-wide text-brand-azure-strong shadow-xs">
+          <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+          JKLU AI-Buildathon 1.0 (PS-02)
         </div>
-      </section>
+
+        <h1 className="mt-4 font-heading text-3xl font-extrabold tracking-tight text-text-heading sm:text-4xl">
+          JKLU CampusFlow
+        </h1>
+
+        <p className="mx-auto mt-2 max-w-xl text-sm text-text-body/80 sm:text-base">
+          AI-agent-powered campus venue, guest house, and parking management system. Seamless,
+          conflict-free scheduling for faculty, student clubs, and campus staff.
+        </p>
+      </div>
 
       {/* Main Login & Demo Accounts Container */}
-      <div className="relative -mt-16 mx-auto max-w-4xl px-4 pb-16 sm:px-6">
+      <div className="mx-auto mt-8 max-w-4xl">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
           {/* Sign In Form */}
-          <Card className="shadow-lg md:col-span-7">
+          <Card className="border border-border-color bg-surface shadow-xs md:col-span-7">
             <CardHeader>
               <CardTitle>Sign In to CampusFlow</CardTitle>
               <CardDescription>
