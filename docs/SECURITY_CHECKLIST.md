@@ -105,3 +105,4 @@ All colors are governed exclusively through design tokens in `src/styles/tokens.
 4. **Motion Sensitivity (`prefers-reduced-motion`)**: All scroll-reveal transitions and animations automatically disable when the user's operating system requests reduced motion.
 5. **High-Contrast Fallbacks**: Text gradients (`--gradient-heading`) automatically fall back to solid `--brand-azure-strong` under Windows High Contrast / `forced-colors: active`.
 6. **ARIA & Form Accessibility**: All icons have descriptive `aria-label`s or `aria-hidden="true"`. All form inputs have explicitly associated `<label>` tags with `htmlFor` bindings.
+

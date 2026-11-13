@@ -228,3 +228,4 @@ The login page (`/login`) includes 1-click synthetic demo accounts (under `@demo
 ## 10. License & Attribution
 
 Built for the **JKLU AI-Buildathon 1.0**. All campus components, logos, and layouts are original implementations inspired by the JKLU design language.
+
