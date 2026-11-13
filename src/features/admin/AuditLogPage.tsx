@@ -8,7 +8,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { auditApi, AuditSearchParams } from '@/api/audit';
-import { GradientHeading } from '@/components/ui/GradientHeading';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -83,18 +83,11 @@ export function AuditLogPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-alt py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-          <div>
-            <GradientHeading as="h1" className="text-3xl font-extrabold sm:text-4xl">
-              Compliance & Security Audit Log
-            </GradientHeading>
-            <p className="mt-2 text-sm text-text-body/80 sm:text-base">
-              Immutable, auditable ledger tracking AI agent reasoning, deterministic tool calls, administrative approvals, and user logins.
-            </p>
-          </div>
-
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <PageHeader
+        title="Compliance & Security Audit Log"
+        description="Immutable, auditable ledger tracking AI agent reasoning, deterministic tool calls, administrative approvals, and user logins."
+        actions={
           <Button
             type="button"
             onClick={handleExportCsv}
@@ -105,7 +98,8 @@ export function AuditLogPage() {
             <Download className="mr-2 h-4 w-4" aria-hidden="true" />
             Export CSV
           </Button>
-        </div>
+        }
+      />
 
         {/* Filter Controls */}
         <Card className="mt-6 shadow-sm">
@@ -320,6 +314,5 @@ export function AuditLogPage() {
           </div>
         )}
       </div>
-    </div>
   );
 }

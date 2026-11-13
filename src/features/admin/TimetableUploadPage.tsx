@@ -11,7 +11,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { adminApi, TimetableUploadResponse } from '@/api/admin';
-import { GradientHeading } from '@/components/ui/GradientHeading';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -97,16 +97,11 @@ export function TimetableUploadPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-alt py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div>
-          <GradientHeading as="h1" className="text-3xl font-extrabold sm:text-4xl">
-            Semester Timetable Upload & Synchronization
-          </GradientHeading>
-          <p className="mt-2 text-sm text-text-body/80 sm:text-base">
-            Upload institutional semester schedules in CSV, Excel, or PDF. The client parser validates room existence and detects timetable clashes before publishing.
-          </p>
-        </div>
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <PageHeader
+        title="Semester Timetable Upload & Synchronization"
+        description="Upload institutional semester schedules in CSV, Excel, or PDF. The client parser validates room existence and detects timetable clashes before publishing."
+      />
 
         {/* Success Message */}
         {publishSuccess && (
@@ -320,6 +315,5 @@ export function TimetableUploadPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
   );
 }

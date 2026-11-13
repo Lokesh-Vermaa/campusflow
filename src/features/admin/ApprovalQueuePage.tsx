@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { adminApi } from '@/api/admin';
 import { Booking } from '@/api/types';
-import { GradientHeading } from '@/components/ui/GradientHeading';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
@@ -73,22 +73,17 @@ export function ApprovalQueuePage() {
   const pagination = data?.pagination;
 
   return (
-    <div className="min-h-screen bg-surface-alt py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-brand-azure-strong/20 bg-brand-azure-strong/10 px-3 py-1 text-xs font-semibold text-brand-azure-strong">
-              <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-              Administrative Governance
-            </div>
-            <GradientHeading as="h1" className="mt-2 text-3xl font-extrabold sm:text-4xl">
-              Booking Approval Queue
-            </GradientHeading>
-            <p className="mt-2 text-sm text-text-body/80 sm:text-base">
-              Every state-changing booking requires admin verification. Review timetable conflict reports and agent recommendations before approving.
-            </p>
-          </div>
-        </div>
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <PageHeader
+        title="Booking Approval Queue"
+        description="Every state-changing booking requires admin verification. Review timetable conflict reports and agent recommendations before approving."
+        badge={
+          <span className="inline-flex items-center gap-2 rounded-full border border-brand-azure-strong/20 bg-brand-azure-strong/10 px-3 py-1 text-xs font-semibold text-brand-azure-strong">
+            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+            Administrative Governance
+          </span>
+        }
+      />
 
         {/* Queue Items */}
         {isLoading ? (
@@ -340,6 +335,5 @@ export function ApprovalQueuePage() {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
   );
 }

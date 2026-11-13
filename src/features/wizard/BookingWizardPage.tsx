@@ -16,7 +16,7 @@ import { roomsApi } from '@/api/rooms';
 import { guestHouseApi } from '@/api/guesthouse';
 import { parkingApi } from '@/api/parking';
 import { CreateBookingRequest, Booking } from '@/api/types';
-import { GradientHeading } from '@/components/ui/GradientHeading';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
@@ -177,16 +177,11 @@ export function BookingWizardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-alt py-8">
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-        <div>
-          <GradientHeading as="h1" className="text-3xl font-extrabold sm:text-4xl">
-            Unified Event Booking Wizard
-          </GradientHeading>
-          <p className="mt-2 text-sm text-text-body/80 sm:text-base">
-            Coordinate classrooms, guest house rooms, and visitor parking in one bundled reservation.
-          </p>
-        </div>
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+        <PageHeader
+          title="Unified Event Booking Wizard"
+          description="Coordinate classrooms, guest house rooms, and visitor parking in one bundled reservation."
+        />
 
         {/* Wizard Steps Stepper */}
         <div className="mt-8 flex items-center justify-between border-b border-border-color pb-4">
@@ -654,6 +649,5 @@ export function BookingWizardPage() {
           </Card>
         )}
       </div>
-    </div>
   );
 }

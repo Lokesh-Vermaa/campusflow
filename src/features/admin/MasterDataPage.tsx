@@ -11,7 +11,7 @@ import {
   FileSpreadsheet,
   Download,
 } from 'lucide-react';
-import { GradientHeading } from '@/components/ui/GradientHeading';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -49,18 +49,11 @@ export function MasterDataPage() {
   );
 
   return (
-    <div className="min-h-screen bg-surface-alt py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-          <div>
-            <GradientHeading as="h1" className="text-3xl font-extrabold sm:text-4xl">
-              Campus Master Data Management
-            </GradientHeading>
-            <p className="mt-2 text-sm text-text-body/80 sm:text-base">
-              Maintain institutional registries for academic blocks, classrooms, specialized labs, guest suites, and parking zones.
-            </p>
-          </div>
-
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <PageHeader
+        title="Campus Master Data Management"
+        description="Maintain institutional registries for academic blocks, classrooms, specialized labs, guest suites, and parking zones."
+        actions={
           <div className="flex gap-2">
             <Button
               type="button"
@@ -76,7 +69,8 @@ export function MasterDataPage() {
               Add Record
             </Button>
           </div>
-        </div>
+        }
+      />
 
         {/* Tab Navigation */}
         <div className="mt-8 flex flex-wrap gap-2 border-b border-border-color pb-3">
@@ -333,6 +327,5 @@ export function MasterDataPage() {
           </div>
         )}
       </div>
-    </div>
   );
 }

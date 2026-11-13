@@ -13,7 +13,7 @@ import {
   VisitorParkingRequestSchema,
   ParkingPermitResponse,
 } from '@/api/types';
-import { GradientHeading } from '@/components/ui/GradientHeading';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
@@ -69,16 +69,11 @@ export function ParkingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-alt py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div>
-          <GradientHeading as="h1" className="text-3xl font-extrabold sm:text-4xl">
-            Campus Parking Management
-          </GradientHeading>
-          <p className="mt-2 text-sm text-text-body/80 sm:text-base">
-            Live occupancy monitoring across campus parking bays and instant synthetic gate pass allocation for visitors.
-          </p>
-        </div>
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <PageHeader
+          title="Visitor Parking"
+          description="Allocate parking slots for campus visitors and external delegates."
+        />
 
         {/* Live Zones Grid */}
         <div className="mt-8">
@@ -301,6 +296,5 @@ export function ParkingPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
   );
 }

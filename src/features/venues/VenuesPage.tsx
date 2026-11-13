@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { venuesApi } from '@/api/venues';
 import { Venue } from '@/api/types';
-import { GradientHeading } from '@/components/ui/GradientHeading';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -36,16 +36,11 @@ export function VenuesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-alt py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div>
-          <GradientHeading as="h1" className="text-3xl font-extrabold sm:text-4xl">
-            Campus Venues & Specialised Labs
-          </GradientHeading>
-          <p className="mt-2 text-sm text-text-body/80 sm:text-base">
-            Book Rabindranath Tagore Amphitheatre, Open Air Theatre, and eligible engineering laboratories for events, hackathons, and guest lectures.
-          </p>
-        </div>
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <PageHeader
+          title="Campus Venues & Specialised Labs"
+          description="Book the amphitheatre, open air theatre, and eligible engineering laboratories for events, hackathons, and guest lectures."
+        />
 
         {isLoading ? (
           <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -149,6 +144,5 @@ export function VenuesPage() {
           </div>
         )}
       </div>
-    </div>
   );
 }

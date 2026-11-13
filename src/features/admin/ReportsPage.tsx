@@ -18,7 +18,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { reportsApi } from '@/api/reports';
-import { GradientHeading } from '@/components/ui/GradientHeading';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -51,19 +51,11 @@ export function ReportsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-surface-alt py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-          <div>
-            <GradientHeading as="h1" className="text-3xl font-extrabold sm:text-4xl">
-              Campus Resource Utilisation & Analytics
-            </GradientHeading>
-            <p className="mt-2 text-sm text-text-body/80 sm:text-base">
-              Institutional intelligence tracking room occupancy rates, peak lecture hours, guest house demand, and visitor parking distribution.
-            </p>
-          </div>
-
-          {/* Date Range Selector */}
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <PageHeader
+        title="Campus Resource Utilisation & Analytics"
+        description="Institutional intelligence tracking room occupancy rates, peak lecture hours, guest house demand, and visitor parking distribution."
+        actions={
           <div className="flex items-center gap-2 rounded-lg border border-border-color bg-surface p-2 shadow-2xs">
             <Filter className="h-4 w-4 text-text-body/50" aria-hidden="true" />
             <Input
@@ -82,7 +74,8 @@ export function ReportsPage() {
               aria-label="End report date"
             />
           </div>
-        </div>
+        }
+      />
 
         {/* Executive KPI Summary Tiles */}
         <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -274,6 +267,5 @@ export function ReportsPage() {
           </Card>
         </div>
       </div>
-    </div>
   );
 }

@@ -11,7 +11,7 @@ import {
 import { guestHouseApi } from '@/api/guesthouse';
 import { GuestHouseRoom } from '@/api/types';
 import { useAuth } from '@/features/auth/useAuth';
-import { GradientHeading } from '@/components/ui/GradientHeading';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
@@ -55,16 +55,11 @@ export function GuestHousePage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-alt py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div>
-          <GradientHeading as="h1" className="text-3xl font-extrabold sm:text-4xl">
-            MDC Guest House Accommodations
-          </GradientHeading>
-          <p className="mt-2 text-sm text-text-body/80 sm:text-base">
-            Comfortable campus stay for visiting scholars, keynote speakers, examination evaluators, and VIP guests.
-          </p>
-        </div>
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <PageHeader
+          title="MDC Guest House"
+          description="Reserve rooms at the JKLU Management Development Centre guest house for visiting speakers, delegates, and official guests."
+        />
 
         {/* Date & Type Selector Panel */}
         <Card className="mt-6 shadow-sm">
@@ -208,6 +203,5 @@ export function GuestHousePage() {
           </div>
         )}
       </div>
-    </div>
   );
 }

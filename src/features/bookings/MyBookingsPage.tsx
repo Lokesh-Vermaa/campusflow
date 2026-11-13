@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { bookingsApi, BookingListParams } from '@/api/bookings';
 import { Booking } from '@/api/types';
-import { GradientHeading } from '@/components/ui/GradientHeading';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -68,16 +68,11 @@ export function MyBookingsPage() {
   const pagination = data?.pagination;
 
   return (
-    <div className="min-h-screen bg-surface-alt py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div>
-          <GradientHeading as="h1" className="text-3xl font-extrabold sm:text-4xl">
-            My Campus Bookings
-          </GradientHeading>
-          <p className="mt-2 text-sm text-text-body/80 sm:text-base">
-            Review status, cancellation requests, and administrator review logs for your scheduled venues.
-          </p>
-        </div>
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <PageHeader
+          title="My Bookings"
+          description="Track and manage all your venue, guest house, and parking booking requests."
+        />
 
         {/* Status Filter Tabs */}
         <div className="mt-6 flex flex-wrap items-center gap-2 border-b border-border-color pb-4">
@@ -371,6 +366,5 @@ export function MyBookingsPage() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </div>
   );
 }

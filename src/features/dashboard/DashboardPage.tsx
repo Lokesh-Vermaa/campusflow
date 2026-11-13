@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 export function DashboardPage() {
   const { user } = useAuth();
@@ -38,30 +39,26 @@ export function DashboardPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* 1. Clean Page Header */}
-      <div className="flex flex-col items-start justify-between gap-4 border-b border-border-color pb-6 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="font-heading text-2xl font-bold tracking-tight text-text-heading sm:text-3xl">
-            Campus Overview
-          </h1>
-          <p className="mt-1 text-sm text-text-body/70">
-            Welcome back, {user?.name || 'Organiser'} ({user?.role}). Real-time campus room availability, pending approvals, and booking activity.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button asChild variant="default" size="sm">
-            <Link to="/">
-              <Bot className="mr-2 h-4 w-4" aria-hidden="true" />
-              Ask AI Agent
-            </Link>
-          </Button>
-          <Button asChild variant="orange" size="sm">
-            <Link to="/bookings/new">
-              <PlusCircle className="mr-2 h-4 w-4" aria-hidden="true" />
-              New Booking
-            </Link>
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Campus Overview"
+        description={`Welcome back, ${user?.name ?? 'Organiser'} (${user?.role ?? ''}). Real-time campus room availability, pending approvals, and booking activity.`}
+        actions={
+          <>
+            <Button asChild variant="default" size="sm">
+              <Link to="/">
+                <Bot className="mr-2 h-4 w-4" aria-hidden="true" />
+                Ask AI Agent
+              </Link>
+            </Button>
+            <Button asChild variant="orange" size="sm">
+              <Link to="/bookings/new">
+                <PlusCircle className="mr-2 h-4 w-4" aria-hidden="true" />
+                New Booking
+              </Link>
+            </Button>
+          </>
+        }
+      />
 
       {/* 2. Stat Tiles */}
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

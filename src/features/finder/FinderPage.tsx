@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { roomsApi, RoomSearchParams } from '@/api/rooms';
 import { AvailableRoom, UnavailableRoom } from '@/api/types';
-import { GradientHeading } from '@/components/ui/GradientHeading';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
@@ -87,23 +87,17 @@ export function FinderPage() {
   const unavailableRooms: UnavailableRoom[] = data?.unavailableRooms || [];
 
   return (
-    <div className="min-h-screen bg-surface-alt py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-          <div>
-            <GradientHeading as="h1" className="text-3xl font-extrabold sm:text-4xl">
-              Free Classroom Finder
-            </GradientHeading>
-            <p className="mt-2 text-sm text-text-body/80 sm:text-base">
-              Cross-checks all 8 semester timetables and approved bookings in real time to guarantee clash-free rooms.
-            </p>
-          </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-brand-azure-strong/20 bg-brand-azure-strong/10 px-3 py-1.5 text-xs font-semibold text-brand-azure-strong">
-            <Sparkles className="h-4 w-4" aria-hidden="true" />
-            Deterministic Interval Overlap Engine Active
-          </div>
-        </div>
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <PageHeader
+          title="Free Classroom Finder"
+          description="Cross-checks all 8 semester timetables and approved bookings in real time to guarantee clash-free rooms."
+          badge={
+            <span className="inline-flex items-center gap-2 rounded-full border border-brand-azure-strong/20 bg-brand-azure-strong/10 px-3 py-1.5 text-xs font-semibold text-brand-azure-strong">
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+              Live conflict detection
+            </span>
+          }
+        />
 
         {/* Filters Panel */}
         <Card className="mt-6 shadow-sm">
@@ -437,7 +431,6 @@ export function FinderPage() {
           </div>
         )}
       </div>
-    </div>
   );
 }
 
