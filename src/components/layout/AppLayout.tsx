@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { SkipLink } from '@/components/ui/SkipLink';
 import { Sidebar, RecentChat } from '@/components/layout/Sidebar';
 import { MobileTopBar } from '@/components/layout/MobileTopBar';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { conversationsApi } from '@/api/conversations';
 import { cn } from '@/lib/cn';
 
@@ -80,6 +81,13 @@ export function AppLayout({ children }: AppLayoutProps) {
       >
         {/* Mobile Slim Top Bar */}
         <MobileTopBar onOpenSidebar={handleOpenMobile} />
+
+        {/* Desktop Top Header Bar with Theme Toggle at Top Right */}
+        <header className="hidden md:flex sticky top-0 z-20 h-12 w-full items-center justify-end border-b border-border-color/40 bg-surface/80 px-6 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+          </div>
+        </header>
 
         {/* Main Content — full height for chat pages */}
         <main

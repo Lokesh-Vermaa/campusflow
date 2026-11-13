@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Menu, Plus } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 interface MobileTopBarProps {
   onOpenSidebar: () => void;
@@ -22,13 +23,16 @@ export function MobileTopBar({ onOpenSidebar }: MobileTopBarProps) {
         <Logo />
       </Link>
 
-      <Link
-        to="/"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-color bg-surface text-brand-azure-strong hover:bg-surface-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-azure-strong"
-        aria-label="New chat"
-      >
-        <Plus className="h-5 w-5" aria-hidden="true" />
-      </Link>
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
+        <Link
+          to="/"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-color bg-surface text-brand-azure-strong hover:bg-surface-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-azure-strong"
+          aria-label="New chat"
+        >
+          <Plus className="h-5 w-5" aria-hidden="true" />
+        </Link>
+      </div>
     </header>
   );
 }

@@ -20,6 +20,22 @@
   --gradient-heading: linear-gradient(90deg, #2e86de 0%, #b9774f 100%);
 }
 
+[data-theme='dark'],
+.dark {
+  --brand-periwinkle: #8ba5e3;
+  --brand-periwinkle-deep: #5b79c2;
+  --brand-azure: #38bdf8;
+  --brand-azure-strong: #38bdf8;
+  --brand-orange: #ff781f;
+  --brand-orange-ink: #ff9147;
+  --text-heading: #f9fafb;
+  --text-body: #e5e7eb;
+  --surface: #0f172a;
+  --surface-alt: #1e293b;
+  --border: #334155;
+  --gradient-heading: linear-gradient(90deg, #60a5fa 0%, #fb923c 100%);
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
