@@ -25,14 +25,14 @@
   --brand-periwinkle: #8ba5e3;
   --brand-periwinkle-deep: #5b79c2;
   --brand-azure: #38bdf8;
-  --brand-azure-strong: #38bdf8;
-  --brand-orange: #ff781f;
-  --brand-orange-ink: #ff9147;
-  --text-heading: #f9fafb;
-  --text-body: #e5e7eb;
-  --surface: #0f172a;
-  --surface-alt: #1e293b;
-  --border: #334155;
+  --brand-azure-strong: #0096ff;
+  --brand-orange: #ff6b00;
+  --brand-orange-ink: #ff8533;
+  --text-heading: #f5f5f5;
+  --text-body: #d4d4d4;
+  --surface: #0a0a0a;       /* true deep blackish background */
+  --surface-alt: #171717;   /* neutral dark charcoal/gray for cards, sidebar & elevated containers */
+  --border: #262626;        /* neutral dark gray border */
   --gradient-heading: linear-gradient(90deg, #60a5fa 0%, #fb923c 100%);
 }
 
