@@ -454,3 +454,22 @@ export const AgentChatMessageSchema = z.object({
 });
 export type AgentChatMessage = z.infer<typeof AgentChatMessageSchema>;
 
+// ==========================================
+// 12. Conversation Schemas
+// ==========================================
+
+export const ConversationSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  userId: z.string().uuid(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type Conversation = z.infer<typeof ConversationSchema>;
+
+export const PaginatedConversationsResponseSchema = z.object({
+  items: z.array(ConversationSchema),
+  pagination: PaginationSchema,
+});
+export type PaginatedConversationsResponse = z.infer<typeof PaginatedConversationsResponseSchema>;
+

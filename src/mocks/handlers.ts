@@ -11,7 +11,7 @@ import {
   SEED_TIMETABLE,
 } from './seedData';
 import { computeAvailability } from './availabilityEngine';
-import { Booking, BookingStatus, User } from '@/api/types';
+import { Booking, BookingStatus, Conversation, User } from '@/api/types';
 
 // ==========================================
 // In-Memory Mutable State
@@ -23,6 +23,16 @@ const roomsDb = [...SEED_ROOMS];
 const guestHouseDb = [...SEED_GUESTHOUSE_ROOMS];
 const parkingDb = [...SEED_PARKING_ZONES];
 const announcementDb = { ...SEED_ANNOUNCEMENT };
+
+// Conversations store: userId -> Map<convId, Conversation>
+const conversationsStore = new Map<string, Map<string, Conversation>>();
+
+function getUserConversations(userId: string): Map<string, Conversation> {
+  if (!conversationsStore.has(userId)) {
+    conversationsStore.set(userId, new Map());
+  }
+  return conversationsStore.get(userId)!;
+}
 
 // Track idempotency keys to prevent duplicate booking creation
 const seenIdempotencyKeys = new Map<string, Booking>();
@@ -608,5 +618,117 @@ export const handlers = [
       pendingApprovalsCount: bookingsDb.filter((b) => b.status === 'PENDING').length,
       freeRoomsNow: 14,
     });
+  }),
+
+  // ------------------------------------------
+  // 12. Conversations
+  // ------------------------------------------
+  http.get('/api/conversations', async ({ request }) => {
+    await delay(120);
+    if (!currentUser) {
+      return HttpResponse.json(
+        { code: 'UNAUTHORIZED', message: 'Not logged in', requestId: crypto.randomUUID() },
+        { status: 401 },
+      );
+    }
+    const url = new URL(request.url);
+    const page = parseInt(url.searchParams.get('page') ?? '1', 10);
+    const pageSize = parseInt(url.searchParams.get('pageSize') ?? '50', 10);
+    const userConvs = Array.from(getUserConversations(currentUser.id).values()).sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+    const start = (page - 1) * pageSize;
+    const items = userConvs.slice(start, start + pageSize);
+    return HttpResponse.json({
+      items,
+      pagination: {
+        page,
+        pageSize,
+        totalItems: userConvs.length,
+        totalPages: Math.ceil(userConvs.length / pageSize),
+      },
+    });
+  }),
+
+  http.post('/api/conversations', async () => {
+    await delay(80);
+    if (!currentUser) {
+      return HttpResponse.json(
+        { code: 'UNAUTHORIZED', message: 'Not logged in', requestId: crypto.randomUUID() },
+        { status: 401 },
+      );
+    }
+    const now = new Date().toISOString();
+    const conv: Conversation = {
+      id: crypto.randomUUID(),
+      title: 'New conversation',
+      userId: currentUser.id,
+      createdAt: now,
+      updatedAt: now,
+    };
+    getUserConversations(currentUser.id).set(conv.id, conv);
+    return HttpResponse.json(conv, { status: 201 });
+  }),
+
+  http.get('/api/conversations/:id', async ({ params }) => {
+    await delay(80);
+    if (!currentUser) {
+      return HttpResponse.json(
+        { code: 'UNAUTHORIZED', message: 'Not logged in', requestId: crypto.randomUUID() },
+        { status: 401 },
+      );
+    }
+    const id = params.id as string;
+    const conv = getUserConversations(currentUser.id).get(id);
+    if (!conv) {
+      return HttpResponse.json(
+        { code: 'NOT_FOUND', message: 'Conversation not found or no access', requestId: crypto.randomUUID() },
+        { status: 404 },
+      );
+    }
+    return HttpResponse.json(conv);
+  }),
+
+  http.patch('/api/conversations/:id', async ({ params, request }) => {
+    await delay(80);
+    if (!currentUser) {
+      return HttpResponse.json(
+        { code: 'UNAUTHORIZED', message: 'Not logged in', requestId: crypto.randomUUID() },
+        { status: 401 },
+      );
+    }
+    const id = params.id as string;
+    const userConvs = getUserConversations(currentUser.id);
+    const conv = userConvs.get(id);
+    if (!conv) {
+      return HttpResponse.json(
+        { code: 'NOT_FOUND', message: 'Conversation not found or no access', requestId: crypto.randomUUID() },
+        { status: 404 },
+      );
+    }
+    const body = (await request.json()) as { title?: string };
+    const updated: Conversation = { ...conv, title: body.title ?? conv.title, updatedAt: new Date().toISOString() };
+    userConvs.set(id, updated);
+    return HttpResponse.json(updated);
+  }),
+
+  http.delete('/api/conversations/:id', async ({ params }) => {
+    await delay(80);
+    if (!currentUser) {
+      return HttpResponse.json(
+        { code: 'UNAUTHORIZED', message: 'Not logged in', requestId: crypto.randomUUID() },
+        { status: 401 },
+      );
+    }
+    const id = params.id as string;
+    const userConvs = getUserConversations(currentUser.id);
+    if (!userConvs.has(id)) {
+      return HttpResponse.json(
+        { code: 'NOT_FOUND', message: 'Conversation not found or no access', requestId: crypto.randomUUID() },
+        { status: 404 },
+      );
+    }
+    userConvs.delete(id);
+    return new HttpResponse(null, { status: 204 });
   }),
 ];

@@ -35,7 +35,7 @@ export function useAuth() {
     },
     onSuccess: (loggedUser) => {
       queryClient.setQueryData(AUTH_QUERY_KEY, loggedUser);
-      navigate('/dashboard');
+      navigate('/');
     },
   });
 
