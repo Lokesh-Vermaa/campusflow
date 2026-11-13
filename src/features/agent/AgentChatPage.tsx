@@ -9,8 +9,7 @@ import { useAuth } from '@/features/auth/useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { AgentMessageRenderer } from './AgentMessageRenderer';
-import { PlanCard } from './PlanCard';
-import { ToolCallRow } from './ToolCallRow';
+import { AgentWorkAccordion } from './AgentWorkAccordion';
 import { AlternativesCard } from './AlternativesCard';
 import { ProposalCard } from './ProposalCard';
 import { ReasoningSidePanel } from './ReasoningSidePanel';
@@ -167,9 +166,10 @@ interface MessageItemProps {
   onRetry: () => void;
   onSelectAlternative: (name: string) => void;
   onSubmitProposal: (p: AgentProposal) => Promise<void>;
+  onViewTrace: () => void;
 }
 
-function MessageItem({ msg, isLast, isStreaming, onRetry, onSelectAlternative, onSubmitProposal }: MessageItemProps) {
+function MessageItem({ msg, isLast, isStreaming, onRetry, onSelectAlternative, onSubmitProposal, onViewTrace }: MessageItemProps) {
   const isUser = msg.sender === 'user';
   const [copied, setCopied] = useState(false);
 
@@ -190,7 +190,7 @@ function MessageItem({ msg, isLast, isStreaming, onRetry, onSelectAlternative, o
     );
   }
 
-  // Assistant message — no bubble, just left-aligned with small bot mark
+  // Assistant message — no bubble, left-aligned with small bot mark
   return (
     <div className="flex gap-3">
       {/* Bot icon */}
@@ -210,17 +210,14 @@ function MessageItem({ msg, isLast, isStreaming, onRetry, onSelectAlternative, o
           </div>
         )}
 
-        {/* Plan Card */}
-        {msg.plan && <PlanCard steps={msg.plan} />}
-
-        {/* Tool Call Rows */}
-        {msg.toolCalls && msg.toolCalls.length > 0 && (
-          <div className="space-y-1">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-text-body/50">Tool executions</span>
-            {msg.toolCalls.map((tc) => (
-              <ToolCallRow key={tc.id} tool={tc} />
-            ))}
-          </div>
+        {/* Inline work accordion (plan + tool calls) */}
+        {(msg.plan || msg.toolCalls) && (
+          <AgentWorkAccordion
+            plan={msg.plan}
+            toolCalls={msg.toolCalls}
+            isStreaming={isLast && isStreaming}
+            onViewTrace={onViewTrace}
+          />
         )}
 
         {/* Conflict / Alternatives */}
@@ -491,6 +488,7 @@ export function AgentChatPage() {
                   onRetry={handleRetry}
                   onSelectAlternative={handleSelectAlternative}
                   onSubmitProposal={handleSubmitProposal}
+                  onViewTrace={() => setIsReasoningPanelOpen(true)}
                 />
               ))}
 

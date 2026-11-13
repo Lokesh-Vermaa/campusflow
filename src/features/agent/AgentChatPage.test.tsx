@@ -171,3 +171,4 @@ describe('AgentChatPage – Chat Home & Composer', () => {
     expect(mockStream).not.toHaveBeenCalled();
   });
 });
+
