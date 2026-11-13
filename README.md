@@ -9,11 +9,11 @@
 
 Organisers across university campuses (faculty, staff, student club leads) struggle to find genuinely free rooms because they must manually cross-check timetables of many semesters, avoiding clashes with regular classes, labs, pre-scheduled campus events, and existing bookings.
 
-**JKLU CampusFlow** solves this through a dual-mode experience:
-1. **Interactive Self-Service Portals**: High-performance search engines with visual timetable heatmaps (08:00–20:00), conflict explanations, amphitheatres & lab permissions, MDC guest house reservations, and visitor parking passes.
-2. **AI CampusFlow Agent**: A conversational multi-resource planner that generates multi-step execution plans, invokes deterministic tools, recovers gracefully from simulated network/database tool glitches, detects timetable clashes (e.g. Sem 3 Data Structures in C-204), and packages room + guest house + parking into a unified approval proposal.
-
-Every state-changing booking requires **Admin Approval** with auditable governance, automated clash re-checks, and client-side validated rejection reasons.
+**JKLU CampusFlow** solves this through a modern, **chat-first AI assistant shell** (ChatGPT/Claude/Gemini pattern) with full workspace navigation:
+1. **Chat-First AI Assistant Shell (`/` and `/c/:id`)**: The landing experience after login puts the AI agent front and center: a clean greeting, centered auto-growing composer, role-aware suggestion cards, and a collapsible left sidebar with recent conversations grouped chronologically.
+2. **Deterministic Conflict Solver & Multi-Resource Planner**: The agent generates execution plans, invokes deterministic tools, recovers from simulated tool glitches, detects timetable clashes (e.g. Sem 3 Data Structures in C-204), and packages room + guest house + parking into a unified approval proposal.
+3. **Dedicated Self-Service Portals**: High-performance search engines with visual timetable heatmaps (08:00–20:00), conflict explanations, amphitheatres & lab permissions, MDC guest house reservations, and visitor parking passes.
+4. **Administrative Governance**: Every state-changing booking requires Admin Approval with auditable governance, automated clash re-checks, timetable CSV syncing, and client-side validated rejection reasons.
 
 ---
 
@@ -45,10 +45,11 @@ campusflow/
 │   ├── api/                     # Swappable API layer
 │   │   ├── admin.ts             # Approvals, timetable uploads, master data, audit logs
 │   │   ├── agent.ts             # Agent SSE stream simulation & chat endpoints
-│   │   ├── announcement.ts      # Top announcement stripe API
+│   │   ├── announcement.ts      # Top announcement API
 │   │   ├── auth.ts              # Login & session validation
 │   │   ├── bookings.ts          # Booking mutations, idempotency keys & listing
 │   │   ├── client.ts            # Typed HTTP client (CSRF token, error mapping, 401 handling)
+│   │   ├── conversations.ts     # User conversation management & chat sessions
 │   │   ├── guesthouse.ts        # MDC Guest house availability & reservations
 │   │   ├── parking.ts           # Parking zone status & visitor permits
 │   │   ├── reports.ts           # Analytics and utilization metrics
@@ -56,19 +57,19 @@ campusflow/
 │   │   └── types.ts             # Shared Zod schemas and TypeScript types
 │   ├── assets/                  # Local SVG icons and placeholders
 │   ├── components/
-│   │   ├── common/              # Logo, Header, Footer, AnnouncementStripe, FloatingDock,
-│   │   │                        # BottomNav, ErrorBoundary, GradientHeading, ScrollReveal
-│   │   └── ui/                  # Accessible UI primitives (Button, Card, Dialog, Drawer, etc.)
+│   │   ├── layout/              # AppLayout, Sidebar (collapsible rail + drawer), MobileTopBar, PageHeader
+│   │   ├── common/              # ErrorBoundary, GradientHeading, ScrollReveal
+│   │   └── ui/                  # Accessible UI primitives (Button, Card, Dialog, DropdownMenu, etc.)
 │   ├── features/
 │   │   ├── admin/               # ApprovalQueue, TimetableUpload, MasterData, AuditLog, Reports
-│   │   ├── agent/               # AgentChat, PlanCard, ToolCallRow, ProposalCard,
+│   │   ├── agent/               # AgentChatPage, AgentWorkAccordion, PlanCard, ToolCallRow, ProposalCard,
 │   │   │                        # AlternativesCard, ReasoningSidePanel, AgentMessageRenderer
 │   │   ├── auth/                # LoginPage (1-click demo logins, lockout counter), RequireRole
 │   │   ├── bookings/            # BookingWizard (5 steps), MyBookings, BookingDetailDrawer
-│   │   ├── dashboard/           # DashboardPage (Hero, StatTiles, FeatureBand, QuickActions)
+│   │   ├── dashboard/           # DashboardPage (Campus Overview stat tiles & activity)
+│   │   ├── finder/              # FinderPage (Classroom Finder with timetable clash heatmaps)
 │   │   ├── guesthouse/          # GuestHousePage
 │   │   ├── parking/             # ParkingPage
-│   │   ├── rooms/               # FinderPage, RoomHeatmap
 │   │   └── venues/              # VenuesPage (Amphitheatres & Labs)
 │   ├── hooks/                   # useAuth, useDebounce, useMediaQuery, useToast
 │   ├── lib/                     # utils.ts, constants.ts
@@ -158,6 +159,30 @@ VITE_USE_MOCKS=true
 
 ---
 
+## 6. Application Routes
+
+| Path | Description | Access Scope |
+| :--- | :--- | :--- |
+| `/login` | Authentication page with 1-click synthetic demo accounts | Public |
+| `/` | **AI Agent Chat Home** (empty state greeting + composer + role suggestions) | Authenticated |
+| `/c/:conversationId` | Active AI chat session with message history & streaming | Authenticated |
+| `/overview` | Campus Overview dashboard (stat tiles, bookings activity) | Authenticated |
+| `/rooms` | Free Classroom Finder with interval overlap engine & heatmap | Authenticated |
+| `/venues` | Campus Venues & Specialised Labs directory | Authenticated |
+| `/guest-house` | MDC Guest House room reservations | `STAFF`, `ADMIN` |
+| `/parking` | Visitor parking slot allocation & passes | Authenticated |
+| `/bookings` | User booking management & status tracking | Authenticated |
+| `/bookings/new` | Unified 5-step event booking wizard | Authenticated |
+| `/admin/approvals` | State-changing booking approval queue | `ADMIN` only |
+| `/admin/timetable` | Semester timetable CSV/Excel/PDF upload & synchronization | `ADMIN` only |
+| `/admin/master-data` | Master institutional resource registries | `ADMIN` only |
+| `/admin/audit` | Tamper-evident compliance & AI reasoning audit log | `ADMIN` only |
+| `/admin/reports` | Resource utilisation analytics & hourly heatmaps | `ADMIN` only |
+
+*Note: Legacy paths `/dashboard`, `/finder`, `/guesthouse`, `/wizard`, and `/admin/master` automatically 301-redirect to their canonical routes.*
+
+---
+
 ## 7. Demo Accounts & Role Permissions
 
 The login page (`/login`) includes 1-click synthetic demo accounts (under `@demo.jklu.test`):
@@ -174,35 +199,36 @@ The login page (`/login`) includes 1-click synthetic demo accounts (under `@demo
 
 ## 8. Judge's Demo Script (3 Best Flows)
 
-### Flow 1: AI Agent Multi-Resource Booking (Plan -> Tool Retry -> Conflict -> Proposal)
+### Flow 1: Chat-First AI Multi-Resource Booking (Home -> Stream -> Conflict -> Recovery -> Proposal)
 1. Log in as **Staff** (`staff@demo.jklu.test`).
-2. Click **"Ask CampusFlow Agent"** in the hero banner or right-edge floating dock (`/agent`).
-3. Click the suggested prompt chip:  
-   `"Guest lecture next Thursday 3-5 PM, 80 people, speaker from Delhi needing stay and parking"`.
-4. Observe the interactive stream:
-   - **Plan Card**: Agent displays a 5-step structured plan with real-time status transitions (`pending` -> `running` -> `done`).
-   - **Tool Call Execution & Retry**: The agent calls `check_room_availability`. Notice tool call telemetry: arguments, duration, and simulated retry resilience.
-   - **Conflict Explanation Card**: The agent explains that *Room C-204 is occupied by Sem 3 Data Structures from 3:00 PM to 4:00 PM*, and automatically provides available alternatives (e.g., *Room C-101* or *A-101*).
-   - **Proposal Card**: The agent bundles **Room C-101**, **MDC Guest House (Deluxe Room 201)**, and **Visitor Parking Slot V-03** into an all-in-one package with total capacity and time windows.
-   - Click **"Submit Proposal for Admin Approval"** -> instant submission with an auto-generated tracking ID.
-5. Expand the **"Agent Reasoning & Tool Trace"** side panel to inspect the LLM's step-by-step thinking and tool execution logs.
+2. You land directly on the **Chat Home (`/`)**. Notice the personalized greeting (*"Good afternoon, Dr. Neha"*), the centered composer, and 4 role-tailored prompt suggestion cards.
+3. Click the suggestion card:  
+   `"Plan a guest lecture: room + guest house"`.
+4. Observe the interactive SSE stream in the conversation view (`/c/:id`):
+   - **Agent Work Accordion**: Displays real-time sub-tasks (*"Analyze capacity requirements"*, *"Cross-check 8 semester timetables"*). When done, smoothly collapses into a compact *"Used 3 tools · 0.4s"* summary with a *"Full trace"* button.
+   - **Simulated Tool Glitch & Automatic Recovery**: `queryTimetableDatabase` encounters a timeout on replica 2 and automatically retries with primary shard, completing successfully.
+   - **Conflict Explanation Card**: The agent explains that *Room C-204 is occupied by Sem 3 Data Structures from 15:00 to 16:00*, and automatically presents free alternatives (*Room A-201* or *Room A-301*).
+   - **Proposal Card**: The agent bundles **Room A-201**, **MDC-101 (Deluxe Room)**, and **Main Gate Visitor Parking (Zone P1)** into an all-in-one proposal.
+   - Click **"Submit for Admin Approval"** -> instant submission with an auto-generated tracking ID.
+5. Notice the new chat entry appeared in the left sidebar under *"Today"*. Hover over it to test **Rename** or **Delete**.
+6. Click **"View trace"** in the bottom bar or accordion to slide open the **Reasoning Trace Drawer** displaying tool arguments, JSON outputs, and latency.
 
 ---
 
 ### Flow 2: Free Classroom Finder (Timetable Overlap Engine & Heatmap)
-1. Navigate to **"Find a Room"** (`/find-room`).
+1. Click **"Find a Room"** in the sidebar (`/rooms`).
 2. Select **Tomorrow's Date** and set time from **14:00 to 16:00**.
-3. Move the capacity slider to **60+ seats**, select **Academic Block C**, and check the **Projector** feature.
+3. Move the capacity slider to **60+ seats**, select **Computing Block**, and check the **Projector** feature.
 4. Review the search results:
-   - Clashing rooms (like *C-204*) display clear, red conflict badges explaining the exact class or event causing the clash (*"Clash: Sem 3 Data Structures (15:00 - 16:00)"*).
+   - Clashing rooms (like *C-204*) display clear red conflict callouts explaining the exact class or event causing the clash (*"Clash: B.Tech CSE Sem 3 Data Structures (15:00 - 16:00)"*).
    - Available rooms display green badges with one-click **"Book Room"** actions.
 5. Click **"View Day Schedule"** on any room to toggle the **08:00 - 20:00 visual timeline heatmap**, showing scheduled class slots, existing reservations, and open windows at a glance.
 
 ---
 
 ### Flow 3: Admin Governance (Approval Queue, Rejection Validation & Timetable Sync)
-1. Switch account to **Admin** (`admin@demo.jklu.test`) via the top profile menu.
-2. The navigation bar dynamically displays the **ADMIN** menu and notification badges.
+1. Switch account to **Admin** (`admin@demo.jklu.test`) via the bottom-left profile menu.
+2. The sidebar dynamically reveals the **Admin** group with an **Approvals** badge indicating pending requests.
 3. Open the **Approval Queue** (`/admin/approvals`):
    - Review pending requests. Each card details the requester, resources requested, timetable clash check status (*"Clash check: Clean"*), and AI Agent recommendation.
    - Test rejection validation: Click **"Reject"**, enter fewer than 5 characters (e.g. *"No"*), and note client-side Zod validation blocking the submission (*"Rejection reason must be at least 5 characters"*). Enter *"Venue reserved for Academic Council"* to confirm rejection.

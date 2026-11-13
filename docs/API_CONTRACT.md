@@ -489,3 +489,74 @@ HTTP Status: `400`, `401`, `403`, `404`, `409`, `422`, `500`
 }
 ```
 
+---
+
+## 12. Conversations & Assistant History
+
+### 12.1 List User Conversations
+- **Method**: `GET`
+- **Path**: `/api/conversations?page=1&pageSize=50`
+- **Roles**: Authenticated (`STUDENT`, `STAFF`, `ADMIN`)
+- **Isolation**: Returns only conversations owned by the caller's `userId`.
+- **Response**: `200 OK`
+```json
+{
+  "items": [
+    {
+      "id": "c0000001-0000-4000-8000-000000000001",
+      "title": "Guest lecture with speaker from Delhi",
+      "userId": "11111111-1111-4111-8111-111111111111",
+      "createdAt": "2026-11-13T09:30:00Z",
+      "updatedAt": "2026-11-13T09:45:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "pageSize": 50,
+    "totalItems": 1,
+    "totalPages": 1
+  }
+}
+```
+
+### 12.2 Create Conversation
+- **Method**: `POST`
+- **Path**: `/api/conversations`
+- **Roles**: Authenticated
+- **Response**: `201 Created`
+```json
+{
+  "id": "c0000001-0000-4000-8000-000000000002",
+  "title": "New conversation",
+  "userId": "11111111-1111-4111-8111-111111111111",
+  "createdAt": "2026-11-13T10:00:00Z",
+  "updatedAt": "2026-11-13T10:00:00Z"
+}
+```
+
+### 12.3 Get Conversation by ID
+- **Method**: `GET`
+- **Path**: `/api/conversations/{id}`
+- **Roles**: Authenticated (owner only)
+- **Security**: Must return `404 Not Found or No Access` without disclosing whether the conversation belongs to another user.
+- **Response**: `200 OK`
+
+### 12.4 Rename Conversation
+- **Method**: `PATCH`
+- **Path**: `/api/conversations/{id}`
+- **Roles**: Authenticated (owner only)
+- **Request Body**:
+```json
+{
+  "title": "Hackathon Lab Booking"
+}
+```
+- **Response**: `200 OK`
+
+### 12.5 Delete Conversation
+- **Method**: `DELETE`
+- **Path**: `/api/conversations/{id}`
+- **Roles**: Authenticated (owner only)
+- **Response**: `204 No Content`
+
+
