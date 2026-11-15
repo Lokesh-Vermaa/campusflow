@@ -15,3 +15,9 @@ spring:
     clean-disabled: false
     clean-on-validation-error: true
     validate-on-migrate: false
+
+agent:
+  executor:
+    async: false
+  rate-limit:
+    per-minute: 1000

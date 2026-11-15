@@ -1,4 +1,4 @@
-# CampusFlow — API Contract vs Implementation (Fix 7)
+# CampusFlow — API Contract vs Implementation (Phase 5)
 
 Every endpoint in `frontend/docs/API_CONTRACT.md` mapped against the implemented backend controller.
 
@@ -92,7 +92,7 @@ Every endpoint in `frontend/docs/API_CONTRACT.md` mapped against the implemented
 |----------|--------|------|-------------------|--------|
 | 9.1 Audit Log Search | GET | `/api/admin/audit` | `AuditController.searchAuditLogs()` | ✅ MATCH |
 | 9.1 Audit Log Export | GET | `/api/admin/audit/export` | `AuditController.exportAuditCsv()` | ✅ MATCH |
-| 9.2 Utilisation Analytics | GET | `/api/admin/reports/utilisation` | — | ❌ NOT IMPLEMENTED (Phase 5 scope) |
+| 9.2 Utilisation Analytics | GET | `/api/admin/reports/utilisation` | `ReportsController.getUtilisationReport()` | ✅ MATCH (Phase 5) |
 
 ---
 
@@ -119,7 +119,7 @@ Every endpoint in `frontend/docs/API_CONTRACT.md` mapped against the implemented
 
 | Contract | Method | Path | Backend Controller | Status |
 |----------|--------|------|-------------------|--------|
-| 11.1 Announcement Banner | GET | `/api/content/announcement` | — | ❌ NOT IMPLEMENTED (Phase 5 scope) |
+| 11.1 Announcement Banner | GET | `/api/content/announcement` | `ContentController.getAnnouncement()` | ✅ MATCH (Phase 5, public) |
 
 ---
 
@@ -140,8 +140,6 @@ Every endpoint in `frontend/docs/API_CONTRACT.md` mapped against the implemented
 | # | Endpoint | Mismatch | Decision |
 |---|---------|---------|---------|
 | 1 | `GET /api/guesthouse/rooms` | Field names differ: `type` vs `roomType`, `features` vs `amenities`, `pricePerNight` vs `ratePerNight` | **Backend wins** — frontend mock already adapted. Align in Phase 5 cleanup (needs frontend change — awaiting user approval) |
-| 2 | `GET /api/admin/reports/utilisation` | Not implemented | **Phase 5 scope** — deferred with explicit acknowledgement |
-| 3 | `GET /api/content/announcement` | Not implemented | **Phase 5 scope** — deferred with explicit acknowledgement |
-
 > **No path mismatches** — all implemented endpoints match the contract exactly.
 > The availability path is `/api/rooms/availability` on both sides ✅
+> §9.2 Utilisation and §11.1 Announcement now implemented (Phase 5) ✅

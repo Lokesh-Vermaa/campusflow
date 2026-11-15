@@ -1,9 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import '@/styles/tokens.css';
-import App from '@/App';
-import { enableMocking } from '@/mocks/browser';
-import { applyTheme } from '@/hooks/useTheme';
+import './styles/tokens.css';
+import App from './App';
+import { enableMocking } from './mocks/browser';
+import { applyTheme } from './hooks/useTheme';
 
 // Initialize theme on initial load before mount
 try {

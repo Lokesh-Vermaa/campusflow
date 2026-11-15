@@ -34,7 +34,7 @@ describe('Zod Schemas Validation at Boundary', () => {
     expect(() =>
       LoginRequestSchema.parse({
         email: 'invalid-email',
-        password: 'password123',
+        password: 'dummy_secret_pass',
       }),
     ).toThrow();
 

@@ -92,29 +92,39 @@ campusflow/
 
 ---
 
-## 4. Getting Started
+## 4. Getting Started (Judge Instructions)
 
 ### Prerequisites
 - Node.js `v18.0.0` or higher (`v20+` recommended)
 - npm `v9+`
 
-### Installation
+### Installation & Launch
 ```bash
-# Clone the repository
-git clone <repo-url>
-cd campusflow
+# Navigate to frontend directory
+cd frontend
 
-# Install pinned dependencies
+# 1. Copy environment template
+cp .env.example .env
+# Windows PowerShell:
+# Copy-Item .env.example .env
+
+# 2. Install pinned dependencies
 npm install
-```
 
-### Development Server
-```bash
-# Start Vite development server (defaults to port 5173 with MSW mock engine)
+# 3. Start development server
 npm run dev
 ```
 
 Visit `http://localhost:5173` in your browser.
+
+- **Real Backend Connectivity**: In `.env`, ensure:
+  ```properties
+  VITE_USE_MOCKS=false
+  VITE_API_BASE_URL=http://localhost:8080
+  VITE_DEMO_MODE=true
+  VITE_DEMO_PASSWORD=change-me-demo-password
+  ```
+- **Demo Mode**: The login screen (`/login`) will display quick 1-click login buttons for Student, Staff, and Admin roles.
 
 ---
 
@@ -122,16 +132,27 @@ Visit `http://localhost:5173` in your browser.
 
 CampusFlow enforces strict code hygiene across all layers:
 
-| Command | Description |
-| :--- | :--- |
-| `npm run dev` | Launches Vite local dev server with Hot Module Replacement (HMR). |
-| `npm run build` | Compiles TypeScript and builds production distribution into `dist/`. |
-| `npm run preview` | Locally serves production `dist/` build. |
-| `npm run typecheck` | Strict TypeScript compiler check (`tsc --noEmit`). Zero type errors permitted. |
-| `npm run lint` | ESLint check including `jsx-a11y` accessibility and React Hooks rules. |
-| `npm run test` | Executes Vitest test suite in headless JSDOM environment. |
-| `npm run test:watch` | Runs Vitest in interactive watch mode. |
-| `npm run knip` | Audits unused files, dependencies, and unexported declarations. |
+| Command | Description | Status |
+| :--- | :--- | :--- |
+| `npm run dev` | Launches Vite local dev server with Hot Module Replacement (HMR). | Ready |
+| `npm run build` | Compiles TypeScript and builds production distribution into `dist/`. | Passing |
+| `npm run preview` | Locally serves production `dist/` build. | Ready |
+| `npm run typecheck` | Strict TypeScript compiler check (`tsc --noEmit`). Zero type errors. | Passing |
+| `npm run lint` | ESLint 9 check including `jsx-a11y` accessibility and React Hooks rules. | Clean |
+| `npm run test` | Executes Vitest test suite (14 suites, 60 tests passing). | 60/60 Passing |
+| `npm run knip` | Audits unused files, dependencies, and unexported declarations. | Clean |
+
+---
+
+## 6. Troubleshooting & FAQ
+
+| Issue | Cause | Resolution |
+| :--- | :--- | :--- |
+| **Port 5173 already in use** | Stray Vite/Node process | Run `npm run dev -- --port 5174` or kill node processes via Task Manager / `pkill -f node`. |
+| **CORS errors to backend** | Backend origin mismatch | Ensure Spring Boot is running with `dev,demo` profile which explicitly allows `http://localhost:5173`. |
+| **401 Unauthorized loops** | Expired session cookie | Clear browser cookies for `localhost` and log in again via `/login`. |
+| **CSRF Token errors** | Missing CSRF token | The frontend client automatically extracts `XSRF-TOKEN` cookie from `GET /api/auth/me` and forwards it in `X-XSRF-TOKEN` header on all mutating requests. |
+
 
 ---
 

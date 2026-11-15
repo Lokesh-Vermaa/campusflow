@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { ApiError, ApiErrorSchema } from './types';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const rawBase = (import.meta.env.VITE_API_BASE_URL || '/api').trim().replace(/\/+$/, '');
+const BASE_URL = rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`;
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined | null>;

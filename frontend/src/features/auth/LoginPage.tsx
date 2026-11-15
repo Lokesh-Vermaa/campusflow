@@ -14,6 +14,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_SECONDS = 30;
 
+// Demo mode: controlled by env vars, never hardcoded
+const IS_DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD ?? '';
+
 export function LoginPage() {
   const { login, isLoggingIn } = useAuth();
   const location = useLocation();
@@ -35,7 +39,7 @@ export function LoginPage() {
     resolver: zodResolver(LoginRequestSchema),
     defaultValues: {
       email: 'student@demo.jklu.test',
-      password: 'password123',
+      password: DEMO_PASSWORD,
     },
   });
 
@@ -82,7 +86,7 @@ export function LoginPage() {
   const fillDemoAccount = (roleKey: 'student' | 'staff' | 'admin') => {
     const demoUser = SEED_USERS[roleKey];
     setValue('email', demoUser.email);
-    setValue('password', 'password123');
+    setValue('password', DEMO_PASSWORD);
     setAuthError(null);
   };
 
@@ -214,7 +218,8 @@ export function LoginPage() {
             </CardContent>
           </Card>
 
-          {/* Demo Accounts Box */}
+          {/* Demo Accounts Box — shown only when VITE_DEMO_MODE=true */}
+          {IS_DEMO_MODE && (
           <aside className="md:col-span-5" aria-label="Demo Credentials Box">
             <Card className="border-2 border-brand-azure-strong/30 bg-surface shadow-md">
               <CardHeader className="pb-3">
@@ -284,6 +289,7 @@ export function LoginPage() {
               </CardContent>
             </Card>
           </aside>
+          )}
         </div>
       </div>
     </div>

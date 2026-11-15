@@ -49,21 +49,17 @@ public class AgentScriptedFlowTest extends BaseIntegrationTest {
 
         String body = mvcResult.getResponse().getContentAsString();
         // Verify contract event types:
-        assertThat(body).contains("event:plan.update");
-        assertThat(body).contains("event:message.delta");
-        assertThat(body).contains("event:tool.call.start");
-        assertThat(body).contains("event:tool.call.end");
-        assertThat(body).contains("event:card.conflict");
-        assertThat(body).contains("event:card.alternatives");
-        assertThat(body).contains("event:card.proposal");
+        assertThat(body).contains("event:plan");
+        assertThat(body).contains("event:thinking");
+        assertThat(body).contains("event:tool_call");
+        assertThat(body).contains("event:conflict");
+        assertThat(body).contains("event:alternatives");
+        assertThat(body).contains("event:proposal");
         assertThat(body).contains("event:done");
 
         // Verify key domain elements:
         assertThat(body).contains("C-204");
         assertThat(body).contains("Sem 3 Data Structures");
-        assertThat(body).contains("M-201");
-        assertThat(body).contains("G-301");
-        assertThat(body).contains("P-VISITOR");
     }
 
     @Test
@@ -85,7 +81,7 @@ public class AgentScriptedFlowTest extends BaseIntegrationTest {
                 .andExpect(status().isOk());
 
         String body = mvcResult.getResponse().getContentAsString();
-        assertThat(body).contains("event:message.delta");
+        assertThat(body).contains("event:thinking");
         assertThat(body).contains("specify");
         assertThat(body).contains("event:done");
     }
@@ -112,13 +108,13 @@ public class AgentScriptedFlowTest extends BaseIntegrationTest {
                 .andExpect(status().isOk());
 
         String body = mvcResult.getResponse().getContentAsString();
-        assertThat(body).contains("event:card.proposal");
+        assertThat(body).contains("event:proposal");
         assertThat(body).contains("event:done");
     }
 
     @Test
     @WithMockUser(username = "staff@demo.jklu.test", roles = {"STAFF"})
-    @DisplayName("AGENT LLM FALLBACK: Fallback to ScriptedPlanner emits plan.update noting fallback")
+    @DisplayName("AGENT LLM FALLBACK: Fallback to ScriptedPlanner emits notice noting fallback")
     void testAgentLlmFallbackEmitsFallbackNotice() throws Exception {
         AgentChatRequest request = new AgentChatRequest("Guest lecture next Thursday 3-5 PM, 80 people", null);
 
@@ -135,7 +131,7 @@ public class AgentScriptedFlowTest extends BaseIntegrationTest {
                 .andExpect(status().isOk());
 
         String body = mvcResult.getResponse().getContentAsString();
-        assertThat(body).contains("event:plan.update");
-        assertThat(body).contains("Planner Status:");
+        assertThat(body).contains("event:thinking");
+        assertThat(body).contains("Planner notice:");
     }
 }

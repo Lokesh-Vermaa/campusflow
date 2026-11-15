@@ -1,6 +1,12 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "project": ["src/**/*.{ts,tsx}!"],
+  "typescript": {
+    "config": "tsconfig.json"
+  },
+  "paths": {
+    "@/*": ["src/*"]
+  },
   "ignore": [
     "src/components/ui/**",
     "src/hooks/**",

@@ -26,6 +26,7 @@ spring:
   flyway:
     enabled: true
     clean-disabled: true
+    validate-on-migrate: false
     locations: classpath:db/migration
   servlet:
     multipart:

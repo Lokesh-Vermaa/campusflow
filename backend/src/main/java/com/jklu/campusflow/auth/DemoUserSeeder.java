@@ -113,9 +113,9 @@ public class DemoUserSeeder implements CommandLineRunner {
             ('00000000-0000-0000-0000-000000000061', '00000000-0000-0000-0000-000000000013', 'M-103', 'Analytics & Finance Lab', 'LAB', 35, ARRAY['computers', 'lan', 'ac'], TRUE, TRUE),
             ('00000000-0000-0000-0000-000000000062', '00000000-0000-0000-0000-000000000013', 'M-104', 'Executive Lecture Hall', 'CLASSROOM', 70, ARRAY['projector', 'ac', 'audio_system'], TRUE, TRUE),
             ('00000000-0000-0000-0000-000000000063', '00000000-0000-0000-0000-000000000013', 'M-202', 'Case Study Room 202', 'CLASSROOM', 45, ARRAY['projector', 'ac'], TRUE, TRUE),
-            ('00000000-0000-0000-0000-000000000064', '00000000-0000-0000-0000-000000000013', 'C-204', 'Lecture Hall C-204', 'CLASSROOM', 75, ARRAY['projector', 'ac', 'smartboard'], TRUE, TRUE),
+            ('00000000-0000-0000-0000-000000000064', '00000000-0000-0000-0000-000000000013', 'C-204', 'Lecture Hall C-204', 'CLASSROOM', 80, ARRAY['projector', 'ac', 'smartboard'], TRUE, TRUE),
             ('00000000-0000-0000-0000-000000000065', '00000000-0000-0000-0000-000000000013', 'M-301', 'Dean Conference Room', 'CLASSROOM', 30, ARRAY['projector', 'ac', 'smartboard'], TRUE, FALSE)
-            ON CONFLICT (block_id, room_number) DO NOTHING
+            ON CONFLICT (block_id, room_number) DO UPDATE SET capacity = EXCLUDED.capacity, features = EXCLUDED.features
         """);
     }
 

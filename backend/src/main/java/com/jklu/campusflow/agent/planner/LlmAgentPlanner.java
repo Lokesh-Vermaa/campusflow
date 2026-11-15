@@ -31,14 +31,14 @@ public class LlmAgentPlanner {
         this.llmProvider = llmProvider;
     }
 
-    public void plan(SseEmitter emitter, String rawUserMessage, String userRole, UUID userId) {
+    public void plan(SseEmitter emitter, String rawUserMessage, String userRole, UUID userId, UUID conversationId) {
         // Prompt-injection defense: user message is pure DATA, never executed as commands
         String sanitizedMessage = rawUserMessage != null ? rawUserMessage.trim() : "";
 
         if (llmApiKey == null || llmApiKey.isBlank()) {
-            log.info("No LLM_API_KEY set; falling back to ScriptedPlanner.");
+            log.info("No LLM_API_KEY set; falling back to deterministic data-driven planner.");
             notifyFallback(emitter, "No external LLM key provided. Operating in deterministic offline planner mode.");
-            dispatchScripted(emitter, sanitizedMessage, userRole, userId);
+            scriptedPlanner.runDataDrivenFlow(emitter, sanitizedMessage, userRole, userId, conversationId);
             return;
         }
 
@@ -47,48 +47,31 @@ public class LlmAgentPlanner {
         while (attempts < 2) {
             attempts++;
             try {
-                // Attempt remote LLM invocation
-                invokeRemoteLlm(emitter, sanitizedMessage, userRole, userId);
+                // Remote LLM invocation if key provided
+                invokeRemoteLlm(emitter, sanitizedMessage, userRole, userId, conversationId);
                 return;
             } catch (Exception e) {
                 log.warn("LLM invocation attempt {} failed: {}", attempts, e.getMessage());
                 if (attempts >= 2) {
                     notifyFallback(emitter, "LLM service unavailable after 2 retries. Switching to fallback planner.");
-                    dispatchScripted(emitter, sanitizedMessage, userRole, userId);
+                    scriptedPlanner.runDataDrivenFlow(emitter, sanitizedMessage, userRole, userId, conversationId);
                     return;
                 }
             }
         }
     }
 
-    private void invokeRemoteLlm(SseEmitter emitter, String sanitizedMessage, String userRole, UUID userId) throws Exception {
-        // If an LLM provider is connected in production, call it here.
-        // In local/test mode, throws to trigger safe fallback.
+    private void invokeRemoteLlm(SseEmitter emitter, String sanitizedMessage, String userRole, UUID userId, UUID conversationId) throws Exception {
         throw new IllegalStateException("Remote LLM connection failed or unconfigured.");
     }
 
     private void notifyFallback(SseEmitter emitter, String reason) {
         try {
             emitter.send(SseEmitter.event()
-                    .name("plan.update")
-                    .data("{\"steps\":[{\"id\":0,\"title\":\"Planner Status: " + reason.replace("\"", "\\\"") + "\",\"status\":\"done\"}]}"));
+                    .name("thinking")
+                    .data("{\"content\":\"Planner notice: " + reason.replace("\"", "\\\"") + "\"}"));
         } catch (IOException e) {
             log.warn("Failed to send fallback notification: {}", e.getMessage());
-        }
-    }
-
-    private void dispatchScripted(SseEmitter emitter, String message, String userRole, UUID userId) {
-        String lower = message.toLowerCase();
-        // Check if date or time missing
-        boolean hasDateOrTime = lower.contains("thursday") || lower.contains("friday") || lower.contains("monday")
-                || lower.contains("tuesday") || lower.contains("wednesday") || lower.contains("saturday")
-                || lower.contains("tomorrow") || lower.contains("pm") || lower.contains("am")
-                || lower.contains(":") || lower.contains("3-5") || lower.contains("15:00");
-
-        if (!hasDateOrTime) {
-            scriptedPlanner.runClarifyingFlow(emitter, message, userId);
-        } else {
-            scriptedPlanner.runDemoFlow(emitter, message, userRole, userId);
         }
     }
 }

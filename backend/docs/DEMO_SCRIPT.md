@@ -43,6 +43,83 @@ Password for all demo users: set in `DEMO_USER_PASSWORD` env var (placeholder: `
 | Visitor Parking | P-VISITOR | 40 | `00000000-0000-0000-0000-000000000042` |
 | Student & General | P-STUDENT | 50 | `00000000-0000-0000-0000-000000000043` |
 
+## Phase 5 End-to-End Acceptance Flow (Automated & Tested)
+
+The complete lifecycle is verified in `EndToEndAcceptanceFlowIntegrationTest.java`:
+
+### Step 1: Staff Prompts the AI Agent
+* **User**: `staff@demo.jklu.test` (Staff)
+* **Endpoint**: `POST /api/agent/chat` (or `POST /api/conversations/{id}/messages`)
+* **Prompt**: `"Guest lecture next Thursday 3-5 PM, 80 people, speaker from Delhi needing stay and parking"`
+* **Events Streamed (SSE)**:
+  1. `event:plan`: Dynamic multi-step plan identifying candidate venues, checking timetables, querying guest rooms, visitor parking, and campus policy.
+  2. `event:thinking`: Real-time reasoning about capacity and scheduling constraints.
+  3. `event:tool_call`: `find_free_rooms(minCapacity: 80, role: STAFF)` returning candidate venues (C-204, A-201, M-201).
+  4. `event:tool_call`: `check_room_availability(room: C-204)` showing replica retry simulation and confirmed clash with `CS201 Sem 3 Data Structures 15:00-16:00`.
+  5. `event:conflict`: Detailed conflict card explaining that Room C-204 is occupied by an academic lecture.
+  6. `event:alternatives`: Recommends free alternatives `A-201 (Main Auditorium, cap 120)` and `M-201 (Management Amphitheatre, cap 150)`.
+  7. `event:tool_call`: `reserveGuestHouseRoom` dynamically checks database and allocates free guest room `G-102`.
+  8. `event:tool_call`: `generateVisitorParkingPermit` queries parking zones and assigns `P-STAFF` / `P-VISITOR`.
+  9. `event:tool_call`: `search_booking_policy` retrieves approval policies from `policies/*.md`.
+  10. `event:proposal`: Emits the structured `proposal` card containing `preFilledPayload` for a multi-resource bundle (Room + Guest House + Parking).
+  11. `event:done`: Concluding summary advising human submitter to review and submit for approval.
+
+### Step 2: Staff Submits Proposal for Approval
+* **Endpoint**: `POST /api/bookings` with `X-Idempotency-Key: <uuid>`
+* **Payload**:
+  ```json
+  {
+    "title": "Campus Reservation — 80 Attendees",
+    "description": "Automated plan: Guest lecture next Thursday 3-5 PM...",
+    "resourceType": "ROOM",
+    "resourceId": "00000000-0000-0000-0000-000000000023",
+    "bookingDate": "2026-11-19",
+    "startTime": "15:00",
+    "endTime": "17:00",
+    "expectedAttendees": 80,
+    "guestHouseRoomId": "00000000-0000-0000-0000-000000000032",
+    "guestHouseCheckIn": "2026-11-19",
+    "guestHouseCheckOut": "2026-11-20",
+    "parkingRequests": [
+      {
+        "visitorName": "Keynote Speaker",
+        "vehicleNumber": "DL-01-AB-1234",
+        "zoneId": "00000000-0000-0000-0000-000000000041"
+      }
+    ]
+  }
+  ```
+* **Result**: `201 CREATED` with `status: "PENDING"` (`PENDING_APPROVAL` in database).
+
+### Step 3: Admin Reviews & Approves in Queue
+* **User**: `admin@demo.jklu.test` (Admin)
+* **Endpoint**: `GET /api/admin/approvals?page=1&pageSize=10`
+* **Result**: Pending reservation bundle is visible in queue.
+* **Approve Action**: `POST /api/admin/approvals/{id}/approve`
+  ```json
+  {
+    "note": "Approved by Campus Operations for visiting keynote guest."
+  }
+  ```
+* **Result**: `200 OK` with `status: "APPROVED"` (`CONFIRMED` in database).
+
+### Step 4: Staff Confirms Approval
+* **Endpoint**: `GET /api/bookings/my`
+* **Result**: Booking status is updated to `"APPROVED"`.
+
+### Step 5: Availability Engine Reflects Occupancy
+* **Endpoint**: `GET /api/rooms/availability?date=2026-11-19&startTime=15:00&endTime=17:00`
+* **Result**: Room A-201 is now listed in `unavailableRooms` and no longer in `availableRooms`.
+
+### Step 6: Audit Log Integrity Verification
+* **Endpoint**: `GET /api/admin/audit?pageSize=50`
+* **Result**:
+  - `APPROVAL` row recorded for booking entity.
+  - `AGENT_REASONING` entries visible with summary explanations.
+  - `TOOL_CALL` entries visible with tool names, parameters, and durations.
+
+---
+
 ## Run Commands
 
 ```bash

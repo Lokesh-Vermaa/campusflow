@@ -2,12 +2,12 @@ package com.jklu.campusflow.agent.controller;
 
 import com.jklu.campusflow.agent.dto.AgentChatRequest;
 import com.jklu.campusflow.agent.planner.LlmAgentPlanner;
+import com.jklu.campusflow.agent.service.ConversationService;
 import com.jklu.campusflow.audit.service.AuditService;
 import com.jklu.campusflow.auth.User;
 import com.jklu.campusflow.auth.UserRepository;
 import com.jklu.campusflow.common.error.RateLimitExceededException;
 import com.jklu.campusflow.common.error.ResourceNotFoundException;
-import com.jklu.campusflow.common.security.RequestIdFilter;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,19 +28,31 @@ import java.util.concurrent.*;
 @PreAuthorize("isAuthenticated()")
 public class AgentController {
 
-    private static final int MAX_AGENT_REQUESTS_PER_MINUTE = 10;
-    private static final long SSE_TIMEOUT_MS = 30_000L;
-    private static final ExecutorService SSE_POOL = Executors.newFixedThreadPool(5);
+    private static final long SSE_TIMEOUT_MS = 60_000L;
+    private static final ExecutorService SSE_POOL = Executors.newFixedThreadPool(10);
 
     private final Map<UUID, Deque<Instant>> userRateLimits = new ConcurrentHashMap<>();
     private final LlmAgentPlanner llmAgentPlanner;
     private final UserRepository userRepository;
     private final AuditService auditService;
+    private final ConversationService conversationService;
 
-    public AgentController(LlmAgentPlanner llmAgentPlanner, UserRepository userRepository, AuditService auditService) {
+    @org.springframework.beans.factory.annotation.Value("${agent.executor.async:true}")
+    private boolean asyncExecution = true;
+
+    @org.springframework.beans.factory.annotation.Value("${agent.rate-limit.per-minute:10}")
+    private int maxRequestsPerMinute = 10;
+
+    public AgentController(
+            LlmAgentPlanner llmAgentPlanner,
+            UserRepository userRepository,
+            AuditService auditService,
+            ConversationService conversationService
+    ) {
         this.llmAgentPlanner = llmAgentPlanner;
         this.userRepository = userRepository;
         this.auditService = auditService;
+        this.conversationService = conversationService;
     }
 
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -53,6 +65,11 @@ public class AgentController {
         // Per-user rate limiting: 10 requests / minute
         checkRateLimit(user.getId());
 
+        // IDOR check: if conversationId is provided, caller must own it or get 404
+        if (request.conversationId() != null) {
+            conversationService.getConversation(request.conversationId(), user.getId());
+        }
+
         String userRole = auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .filter(a -> a.startsWith("ROLE_"))
@@ -63,7 +80,7 @@ public class AgentController {
         auditService.record(
                 user.getId(),
                 "AGENT_CHAT",
-                "AGENT",
+                "CONVERSATION",
                 request.conversationId() != null ? request.conversationId().toString() : "new",
                 null,
                 "{\"messageLength\":" + request.message().length() + ",\"role\":\"" + userRole + "\"}",
@@ -72,18 +89,26 @@ public class AgentController {
         );
 
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
-        String message = request.message(); // Treated strictly as DATA
+        String message = request.message();
+        UUID convId = request.conversationId();
 
-        SSE_POOL.submit(() -> {
+        Runnable task = () -> {
             try {
-                llmAgentPlanner.plan(emitter, message, userRole, user.getId());
+                llmAgentPlanner.plan(emitter, message, userRole, user.getId(), convId);
             } catch (Exception e) {
+                org.slf4j.LoggerFactory.getLogger(AgentController.class).error("Agent planning error: {}", e.getMessage(), e);
                 try {
                     emitter.send(SseEmitter.event().name("error").data("{\"error\":\"An unexpected error occurred during agent planning.\"}"));
                     emitter.completeWithError(e);
                 } catch (Exception ignored) {}
             }
-        });
+        };
+
+        if (asyncExecution) {
+            SSE_POOL.submit(task);
+        } else {
+            task.run();
+        }
 
         return emitter;
     }
@@ -95,8 +120,8 @@ public class AgentController {
             while (!timestamps.isEmpty() && timestamps.peekFirst().isBefore(threshold)) {
                 timestamps.pollFirst();
             }
-            if (timestamps.size() >= MAX_AGENT_REQUESTS_PER_MINUTE) {
-                throw new RateLimitExceededException("Agent chat rate limit exceeded. Max 10 messages per minute.", 60);
+            if (timestamps.size() >= maxRequestsPerMinute) {
+                throw new RateLimitExceededException("Agent chat rate limit exceeded. Max " + maxRequestsPerMinute + " messages per minute.", 60);
             }
             timestamps.addLast(Instant.now());
         }

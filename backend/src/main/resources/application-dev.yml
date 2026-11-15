@@ -9,4 +9,5 @@ spring:
   jpa:
     show-sql: false
   flyway:
-    clean-disabled: true
+    clean-disabled: false
+    validate-on-migrate: false
