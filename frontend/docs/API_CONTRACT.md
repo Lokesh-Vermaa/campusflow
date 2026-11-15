@@ -61,7 +61,7 @@ HTTP Status: `400`, `401`, `403`, `404`, `409`, `422`, `500`
 ```json
 {
   "email": "admin@demo.jklu.test",
-  "password": "password123"
+  "password": "<demo-password>"
 }
 ```
 - **Response**: `200 OK` (Sets HTTP-only `JSESSIONID` cookie)

@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 @Component
-@Profile({"demo", "dev", "test"})
+@Profile("demo")
 public class DemoUserSeeder implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DemoUserSeeder.class);
@@ -24,7 +24,7 @@ public class DemoUserSeeder implements CommandLineRunner {
     public DemoUserSeeder(
             JdbcTemplate jdbcTemplate,
             PasswordEncoder passwordEncoder,
-            @Value("${app.demo-password:Whitebeard@009}") String demoPassword
+            @Value("${app.demo-password:${DEMO_USER_PASSWORD:change-me-demo-password}}") String demoPassword
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.passwordEncoder = passwordEncoder;
@@ -60,7 +60,7 @@ public class DemoUserSeeder implements CommandLineRunner {
                 "+91 98765 43212"
         );
 
-        log.info("Runtime demo users seeded successfully.");
+        log.info("Runtime demo users seeded successfully in 'demo' profile.");
     }
 
     private void seedUser(UUID id, String email, String name, String role, String department, String phone) {

@@ -8,19 +8,21 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest(classes = CampusFlowApplication.class)
-@ActiveProfiles("test")
+@ActiveProfiles({"test", "demo"})
 public abstract class BaseIntegrationTest {
 
     @Autowired
     protected Flyway flyway;
 
-    @Autowired
+    @Autowired(required = false)
     protected DemoUserSeeder demoUserSeeder;
 
     @BeforeEach
     void setupDatabase() {
         flyway.clean();
         flyway.migrate();
-        demoUserSeeder.run();
+        if (demoUserSeeder != null) {
+            demoUserSeeder.run();
+        }
     }
 }

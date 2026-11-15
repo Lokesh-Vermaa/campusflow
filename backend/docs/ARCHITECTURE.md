@@ -35,6 +35,5 @@ Configuring `maven-compiler-plugin` to target `<release>21</release>` leverages 
 | **Springdoc OpenAPI** | `2.8.5` | Swagger UI & OpenAPI 3.0 specs |
 | **Apache POI** | `5.3.0` | Excel spreadsheet parsing (.xlsx) |
 | **Apache Commons CSV** | `1.12.0` | CSV timetable parsing |
-| **JJWT** | `0.12.6` | Stateless JWT tokens and signing |
 | **JUnit Jupiter** | `5.12.2` | Test execution framework |
 | **Mockito & ByteBuddy** | `5.14.2` / `1.15.11` | Unit & slice test mocking |

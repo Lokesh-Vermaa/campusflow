@@ -27,7 +27,7 @@ class AuthControllerTest extends BaseIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Value("${app.demo-password:Whitebeard@009}")
+    @Value("${app.demo-password:${DEMO_USER_PASSWORD:change-me-demo-password}}")
     private String demoPassword;
 
     @Test

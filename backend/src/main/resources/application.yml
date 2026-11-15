@@ -40,4 +40,4 @@ app:
   agent:
     mode: ${APP_AGENT_MODE:scripted}
   allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
-  demo-password: ${DEMO_USER_PASSWORD:Whitebeard@009}
+  demo-password: ${DEMO_USER_PASSWORD:}
