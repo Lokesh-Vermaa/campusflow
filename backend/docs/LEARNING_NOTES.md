@@ -7,7 +7,7 @@
 - **Test Database Hygiene**: Test profile runs against `campusflow_test` with `clean-disabled: false`, performing clean and migrate before integration tests. Dev profile has `clean-disabled: true` to prevent accidental production/dev data drops.
 
 ## Phase 1: Foundation - Auth, CSRF, Security, Error Handling, Demo Seed
-- **Dual Session & Token Model**: Dual extraction of JWT tokens from both HttpOnly cookies (`AUTH-TOKEN` / `JSESSIONID`) and `Authorization: Bearer <token>` enables both browser web apps and CLI/curl/Swagger clients to authenticate seamlessly.
-- **Rate Limiting with Sliding Window**: In-memory token bucket/sliding window records IP-based failed login attempts. After 5 consecutive failures within a 15-minute window, subsequent requests return 429 Too Many Requests with a dynamic `Retry-After` header.
-- **Error Hygiene & MDC Request Tracing**: `RequestIdFilter` injects `req-<UUID>` into SLF4J MDC and response headers. `GlobalExceptionHandler` ensures stack traces are never leaked; all exceptions map to `{ code, message, requestId, details? }`.
-- **Security Matrix Verification**: Parameterized security matrix tests validate that anonymous, STUDENT, STAFF, and ADMIN principals are checked against protected endpoints with expected 200, 401, or 403 responses.
+- **Pure Server-Side Session Authentication**: Migrated completely away from Bearer tokens to native server-side `JSESSIONID` cookie sessions with session-fixation protection (`changeSessionId()`), 30-minute idle expiration, and full session invalidation on logout.
+- **Decoupled Demo User Seeding**: Removed all static user credentials and plaintext demo passwords from Flyway SQL scripts. Demo users are created strictly at runtime via `DemoUserSeeder` in `demo`, `dev`, and `test` profiles using BCrypt-hashed passwords from `DEMO_USER_PASSWORD`.
+- **Comprehensive Rate Limiting**: Implemented two tiers of rate limiting: 5 failed login attempts per 15-minute window returning HTTP 429 with `Retry-After`, plus global IP rate limiting (180 req/min).
+- **Exact Contract Conformance**: Synchronized all authentication paths and JSON structures with `API_CONTRACT.md`. Mutating requests enforce standard CSRF verification via `CookieCsrfTokenRepository` (`XSRF-TOKEN` / `X-CSRF-TOKEN`).

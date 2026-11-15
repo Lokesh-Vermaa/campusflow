@@ -3,22 +3,17 @@ package com.jklu.campusflow.auth;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jklu.campusflow.BaseIntegrationTest;
 import com.jklu.campusflow.auth.dto.LoginRequest;
-import com.jklu.campusflow.common.security.JwtAuthenticationFilter;
-import com.jklu.campusflow.common.security.JwtService;
-import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import java.util.UUID;
-
-import static org.hamcrest.Matchers.containsString;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -32,13 +27,13 @@ class AuthControllerTest extends BaseIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Autowired
-    private JwtService jwtService;
+    @Value("${app.demo-password:Whitebeard@009}")
+    private String demoPassword;
 
     @Test
-    @DisplayName("POST /api/auth/login with valid credentials returns 200, user profile, and sets HttpOnly cookies")
+    @DisplayName("POST /api/auth/login with valid credentials returns 200, user profile, no token in body, and creates session")
     void testLoginSuccess() throws Exception {
-        LoginRequest loginRequest = new LoginRequest("student@demo.jklu.test", "password123");
+        LoginRequest loginRequest = new LoginRequest("student@demo.jklu.test", demoPassword);
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -47,16 +42,14 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.user.email").value("student@demo.jklu.test"))
                 .andExpect(jsonPath("$.user.role").value("STUDENT"))
                 .andExpect(jsonPath("$.user.name").value("Aarav Sharma"))
-                .andExpect(jsonPath("$.token").isNotEmpty())
-                .andExpect(cookie().exists(JwtAuthenticationFilter.AUTH_COOKIE_NAME))
-                .andExpect(cookie().httpOnly(JwtAuthenticationFilter.AUTH_COOKIE_NAME, true))
-                .andExpect(cookie().exists(JwtAuthenticationFilter.ALT_COOKIE_NAME));
+                .andExpect(jsonPath("$.token").doesNotExist())
+                .andExpect(request().sessionAttribute("SPRING_SECURITY_CONTEXT", org.hamcrest.Matchers.notNullValue()));
     }
 
     @Test
     @DisplayName("POST /api/auth/login with invalid password returns 401 BAD_CREDENTIALS")
     void testLoginInvalidPassword() throws Exception {
-        LoginRequest loginRequest = new LoginRequest("student@demo.jklu.test", "wrongpassword");
+        LoginRequest loginRequest = new LoginRequest("student@demo.jklu.test", "invalid_password_attempt");
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -67,35 +60,22 @@ class AuthControllerTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("GET /api/auth/me returns 200 with profile when authenticated via cookie")
-    void testGetMeAuthenticatedViaCookie() throws Exception {
-        String token = jwtService.generateToken(
-                UUID.fromString("00000000-0000-0000-0000-000000000001"),
-                "student@demo.jklu.test",
-                "STUDENT"
-        );
+    @DisplayName("GET /api/auth/me returns 200 with profile when authenticated via session")
+    void testGetMeAuthenticatedViaSession() throws Exception {
+        LoginRequest loginRequest = new LoginRequest("student@demo.jklu.test", demoPassword);
 
-        mockMvc.perform(get("/api/auth/me")
-                        .cookie(new Cookie(JwtAuthenticationFilter.AUTH_COOKIE_NAME, token)))
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
+
+        mockMvc.perform(get("/api/auth/me").session(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.email").value("student@demo.jklu.test"))
                 .andExpect(jsonPath("$.user.role").value("STUDENT"));
-    }
-
-    @Test
-    @DisplayName("GET /api/auth/me returns 200 with profile when authenticated via Bearer token")
-    void testGetMeAuthenticatedViaBearer() throws Exception {
-        String token = jwtService.generateToken(
-                UUID.fromString("00000000-0000-0000-0000-000000000002"),
-                "staff@demo.jklu.test",
-                "STAFF"
-        );
-
-        mockMvc.perform(get("/api/auth/me")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.user.email").value("staff@demo.jklu.test"))
-                .andExpect(jsonPath("$.user.role").value("STAFF"));
     }
 
     @Test
@@ -108,19 +88,43 @@ class AuthControllerTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /api/auth/logout clears auth cookies and returns 200")
+    @DisplayName("POST /api/auth/logout invalidates session and clears cookie")
     void testLogout() throws Exception {
-        String token = jwtService.generateToken(
-                UUID.fromString("00000000-0000-0000-0000-000000000001"),
-                "student@demo.jklu.test",
-                "STUDENT"
-        );
+        LoginRequest loginRequest = new LoginRequest("student@demo.jklu.test", demoPassword);
+
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
 
         mockMvc.perform(post("/api/auth/logout")
-                        .cookie(new Cookie(JwtAuthenticationFilter.AUTH_COOKIE_NAME, token)))
+                        .session(session)
+                        .with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(cookie().maxAge(JwtAuthenticationFilter.AUTH_COOKIE_NAME, 0));
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/auth/me").session(session))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/logout without CSRF token is rejected with 403 Forbidden")
+    void testLogoutWithoutCsrfRejected() throws Exception {
+        LoginRequest loginRequest = new LoginRequest("student@demo.jklu.test", demoPassword);
+
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
+
+        mockMvc.perform(post("/api/auth/logout").session(session))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -129,6 +133,6 @@ class AuthControllerTest extends BaseIntegrationTest {
         mockMvc.perform(get("/api/auth/csrf"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").isNotEmpty())
-                .andExpect(jsonPath("$.headerName").isNotEmpty());
+                .andExpect(jsonPath("$.headerName").value("X-CSRF-TOKEN"));
     }
 }

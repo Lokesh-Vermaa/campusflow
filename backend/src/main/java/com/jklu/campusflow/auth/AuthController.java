@@ -2,29 +2,37 @@ package com.jklu.campusflow.auth;
 
 import com.jklu.campusflow.auth.dto.*;
 import com.jklu.campusflow.common.error.ErrorResponse;
-import com.jklu.campusflow.common.security.JwtAuthenticationFilter;
 import com.jklu.campusflow.common.security.RequestIdFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Collections;
 
 @RestController
 @RequestMapping({"/api/auth", "/api/v1/auth"})
 public class AuthController {
 
     private final AuthService authService;
+    private final SecurityContextRepository securityContextRepository;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, SecurityContextRepository securityContextRepository) {
         this.authService = authService;
+        this.securityContextRepository = securityContextRepository;
     }
 
     @PostMapping("/login")
@@ -34,29 +42,22 @@ public class AuthController {
             HttpServletResponse response
     ) {
         String clientIp = resolveClientIp(request);
-        AuthService.LoginResult result = authService.login(loginRequest, clientIp);
+        UserProfileResponse user = authService.login(loginRequest, clientIp);
 
-        boolean isSecure = request.isSecure();
-        ResponseCookie authCookie = ResponseCookie.from(JwtAuthenticationFilter.AUTH_COOKIE_NAME, result.token())
-                .httpOnly(true)
-                .secure(isSecure)
-                .path("/")
-                .maxAge(24 * 60 * 60)
-                .sameSite("Strict")
-                .build();
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                user.email(),
+                null,
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.role()))
+        );
 
-        ResponseCookie sessionCookie = ResponseCookie.from(JwtAuthenticationFilter.ALT_COOKIE_NAME, result.token())
-                .httpOnly(true)
-                .secure(isSecure)
-                .path("/")
-                .maxAge(24 * 60 * 60)
-                .sameSite("Strict")
-                .build();
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
 
-        response.addHeader(HttpHeaders.SET_COOKIE, authCookie.toString());
-        response.addHeader(HttpHeaders.SET_COOKIE, sessionCookie.toString());
+        request.getSession(true);
+        securityContextRepository.saveContext(context, request, response);
 
-        return ResponseEntity.ok(new LoginResponse(result.profile(), result.token()));
+        return ResponseEntity.ok(new LoginResponse(user));
     }
 
     @GetMapping("/me")
@@ -76,27 +77,23 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<LogoutResponse> logout(HttpServletResponse response) {
-        ResponseCookie clearAuthCookie = ResponseCookie.from(JwtAuthenticationFilter.AUTH_COOKIE_NAME, "")
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .maxAge(0)
-                .sameSite("Strict")
-                .build();
-
-        ResponseCookie clearSessionCookie = ResponseCookie.from(JwtAuthenticationFilter.ALT_COOKIE_NAME, "")
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .maxAge(0)
-                .sameSite("Strict")
-                .build();
-
-        response.addHeader(HttpHeaders.SET_COOKIE, clearAuthCookie.toString());
-        response.addHeader(HttpHeaders.SET_COOKIE, clearSessionCookie.toString());
+    public ResponseEntity<LogoutResponse> logout(HttpServletRequest request, HttpServletResponse response) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
 
         SecurityContextHolder.clearContext();
+
+        ResponseCookie clearSessionCookie = ResponseCookie.from("JSESSIONID", "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(0)
+                .sameSite("Lax")
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, clearSessionCookie.toString());
 
         return ResponseEntity.ok(new LogoutResponse(true, "Logged out successfully"));
     }

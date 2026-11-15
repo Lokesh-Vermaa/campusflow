@@ -20,14 +20,14 @@
     <properties>
         <java.version>21</java.version>
         <maven.compiler.release>21</maven.compiler.release>
+        <!-- Unmanaged dependencies by Spring Boot BOM -->
         <springdoc.version>2.8.5</springdoc.version>
         <poi.version>5.3.0</poi.version>
         <commons-csv.version>1.12.0</commons-csv.version>
-        <jjwt.version>0.12.6</jjwt.version>
     </properties>
 
     <dependencies>
-        <!-- Spring Boot Starters -->
+        <!-- Spring Boot Starters (versions managed by BOM) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -49,7 +49,7 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Database -->
+        <!-- Database (versions managed by BOM) -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
@@ -64,14 +64,14 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
-        <!-- OpenAPI / Swagger -->
+        <!-- OpenAPI / Swagger (unmanaged) -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>${springdoc.version}</version>
         </dependency>
 
-        <!-- Timetable parsing (Excel & CSV) -->
+        <!-- Timetable parsing: Excel & CSV (unmanaged) -->
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi</artifactId>
@@ -88,26 +88,7 @@
             <version>${commons-csv.version}</version>
         </dependency>
 
-        <!-- JWT for stateless tokens if needed -->
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-api</artifactId>
-            <version>${jjwt.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-impl</artifactId>
-            <version>${jjwt.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-jackson</artifactId>
-            <version>${jjwt.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-
-        <!-- Testing -->
+        <!-- Testing (versions managed by BOM) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -129,7 +110,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
                 <configuration>
                     <release>21</release>
                     <parameters>true</parameters>
@@ -145,18 +125,17 @@
             <plugin>
                 <groupId>org.flywaydb</groupId>
                 <artifactId>flyway-maven-plugin</artifactId>
-                <version>11.3.4</version>
                 <configuration>
                     <url>jdbc:postgresql://localhost:5432/campusflow</url>
                     <user>campusflow</user>
-                    <password>devpass</password>
+                    <password>${env.DB_PASSWORD}</password>
                     <cleanDisabled>true</cleanDisabled>
                 </configuration>
                 <dependencies>
                     <dependency>
                         <groupId>org.flywaydb</groupId>
                         <artifactId>flyway-database-postgresql</artifactId>
-                        <version>11.3.4</version>
+                        <version>${flyway.version}</version>
                     </dependency>
                 </dependencies>
             </plugin>

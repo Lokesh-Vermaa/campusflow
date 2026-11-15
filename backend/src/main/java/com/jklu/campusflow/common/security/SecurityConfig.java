@@ -10,11 +10,11 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
@@ -30,15 +30,15 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RequestIdFilter requestIdFilter;
+    private final GlobalRateLimitingFilter globalRateLimitingFilter;
 
     @Value("${app.allowed-origins:http://localhost:5173}")
     private String allowedOrigins;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, RequestIdFilter requestIdFilter) {
-        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    public SecurityConfig(RequestIdFilter requestIdFilter, GlobalRateLimitingFilter globalRateLimitingFilter) {
         this.requestIdFilter = requestIdFilter;
+        this.globalRateLimitingFilter = globalRateLimitingFilter;
     }
 
     @Bean
@@ -47,15 +47,20 @@ public class SecurityConfig {
     }
 
     @Bean
+    public SecurityContextRepository securityContextRepository() {
+        return new HttpSessionSecurityContextRepository();
+    }
+
+    @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository securityContextRepository) throws Exception {
         CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfTokenRepository.setCookieName("XSRF-TOKEN");
-        csrfTokenRepository.setHeaderName("X-XSRF-TOKEN");
+        csrfTokenRepository.setHeaderName("X-CSRF-TOKEN");
 
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
         requestHandler.setCsrfRequestAttributeName(null);
@@ -68,14 +73,16 @@ public class SecurityConfig {
                 .ignoringRequestMatchers(
                     "/api/auth/login",
                     "/api/v1/auth/login",
-                    "/api/auth/logout",
-                    "/api/v1/auth/logout",
                     "/api/auth/csrf",
                     "/api/v1/auth/csrf",
                     "/swagger-ui/**",
                     "/v3/api-docs/**",
                     "/actuator/**"
                 )
+            )
+            .securityContext(context -> context.securityContextRepository(securityContextRepository))
+            .sessionManagement(session -> session
+                .sessionFixation(sf -> sf.changeSessionId())
             )
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, authException) -> {
@@ -91,7 +98,6 @@ public class SecurityConfig {
                     response.getWriter().write("{\"code\":\"FORBIDDEN\",\"message\":\"You do not have permission to access this resource\",\"requestId\":\"" + RequestIdFilter.getCurrentRequestId() + "\"}");
                 })
             )
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .headers(headers -> headers
                 .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'"))
                 .contentTypeOptions(Customizer.withDefaults())
@@ -102,12 +108,8 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/auth/login",
                     "/api/v1/auth/login",
-                    "/api/auth/logout",
-                    "/api/v1/auth/logout",
                     "/api/auth/csrf",
                     "/api/v1/auth/csrf",
-                    "/api/auth/me",
-                    "/api/v1/auth/me",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/v3/api-docs/**",
@@ -115,9 +117,7 @@ public class SecurityConfig {
                 ).permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .anyRequest().authenticated()
-            )
-            .addFilterBefore(requestIdFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            );
 
         return http.build();
     }
@@ -133,9 +133,8 @@ public class SecurityConfig {
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList(
                 "Content-Type",
-                "Authorization",
-                "X-XSRF-TOKEN",
                 "X-CSRF-TOKEN",
+                "X-XSRF-TOKEN",
                 "X-Request-ID",
                 "X-Idempotency-Key"
         ));

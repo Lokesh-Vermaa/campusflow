@@ -4,7 +4,6 @@ import com.jklu.campusflow.auth.dto.LoginRequest;
 import com.jklu.campusflow.auth.dto.UserProfileResponse;
 import com.jklu.campusflow.common.error.RateLimitExceededException;
 import com.jklu.campusflow.common.error.ResourceNotFoundException;
-import com.jklu.campusflow.common.security.JwtService;
 import com.jklu.campusflow.common.security.LoginRateLimiter;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,23 +15,20 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
     private final LoginRateLimiter loginRateLimiter;
 
     public AuthService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            JwtService jwtService,
             LoginRateLimiter loginRateLimiter
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
         this.loginRateLimiter = loginRateLimiter;
     }
 
     @Transactional(readOnly = true)
-    public LoginResult login(LoginRequest request, String clientIp) {
+    public UserProfileResponse login(LoginRequest request, String clientIp) {
         if (loginRateLimiter.isBlocked(clientIp)) {
             long retryAfter = loginRateLimiter.getRetryAfterSeconds(clientIp);
             throw new RateLimitExceededException(
@@ -50,11 +46,7 @@ public class AuthService {
         }
 
         loginRateLimiter.recordSuccess(clientIp);
-
-        String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole());
-        UserProfileResponse profile = mapToProfile(user);
-
-        return new LoginResult(profile, token);
+        return mapToProfile(user);
     }
 
     @Transactional(readOnly = true)
@@ -74,6 +66,4 @@ public class AuthService {
                 null
         );
     }
-
-    public record LoginResult(UserProfileResponse profile, String token) {}
 }

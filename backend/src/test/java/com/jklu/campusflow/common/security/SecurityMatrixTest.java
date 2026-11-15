@@ -1,7 +1,6 @@
 package com.jklu.campusflow.common.security;
 
 import com.jklu.campusflow.BaseIntegrationTest;
-import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -10,8 +9,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import java.util.UUID;
-
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -20,9 +18,6 @@ class SecurityMatrixTest extends BaseIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
-
-    @Autowired
-    private JwtService jwtService;
 
     @ParameterizedTest(name = "{0} on {1} expects HTTP {2}")
     @CsvSource({
@@ -40,12 +35,7 @@ class SecurityMatrixTest extends BaseIntegrationTest {
         MockHttpServletRequestBuilder request = get(endpoint);
 
         if (!"ANONYMOUS".equals(role)) {
-            String token = jwtService.generateToken(
-                    UUID.randomUUID(),
-                    role.toLowerCase() + "@demo.jklu.test",
-                    role
-            );
-            request.cookie(new Cookie(JwtAuthenticationFilter.AUTH_COOKIE_NAME, token));
+            request.with(user(role.toLowerCase() + "@demo.jklu.test").roles(role));
         }
 
         mockMvc.perform(request)

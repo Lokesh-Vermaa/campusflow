@@ -55,7 +55,7 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
   - **Student**: `student@demo.jklu.test`
   - **Staff**: `staff@demo.jklu.test`
   - **Admin**: `admin@demo.jklu.test`
-  - *(Password for all demo accounts: `password123`)*
+  - *(Password configured via `DEMO_USER_PASSWORD` in `.env`)*
 
 ---
 
