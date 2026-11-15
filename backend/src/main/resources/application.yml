@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: campusflow-backend
+  profiles:
+    default: dev
+  jackson:
+    time-zone: Asia/Kolkata
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Kolkata
+  flyway:
+    enabled: true
+    clean-disabled: true
+    locations: classpath:db/migration
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+app:
+  agent:
+    mode: ${APP_AGENT_MODE:scripted}
+  allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
+  demo-password: ${DEMO_USER_PASSWORD:Whitebeard@009}

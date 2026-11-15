@@ -1,0 +1,12 @@
+spring:
+  config:
+    import: "optional:file:.env[.properties]"
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/campusflow}
+    username: ${DB_USER:campusflow}
+    password: ${DB_PASSWORD:devpass}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: false
+  flyway:
+    clean-disabled: true
