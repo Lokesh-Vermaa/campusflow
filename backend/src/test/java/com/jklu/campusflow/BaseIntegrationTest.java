@@ -21,10 +21,16 @@ public abstract class BaseIntegrationTest {
     @Autowired(required = false)
     protected GlobalRateLimitingFilter globalRateLimitingFilter;
 
+    @Autowired(required = false)
+    protected com.jklu.campusflow.campus.service.CampusDataService campusDataService;
+
     @BeforeEach
     void setupDatabase() {
         if (globalRateLimitingFilter != null) {
             globalRateLimitingFilter.resetAll();
+        }
+        if (campusDataService != null) {
+            campusDataService.resetAllocatedPermits();
         }
         flyway.clean();
         flyway.migrate();

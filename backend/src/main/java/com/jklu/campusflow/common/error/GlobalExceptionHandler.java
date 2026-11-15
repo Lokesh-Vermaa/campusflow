@@ -66,6 +66,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
 
+    @ExceptionHandler(BookingConflictException.class)
+    public ResponseEntity<com.jklu.campusflow.booking.dto.ConflictWithAlternativesResponse> handleBookingConflict(BookingConflictException ex) {
+        com.jklu.campusflow.booking.dto.ConflictWithAlternativesResponse body =
+                new com.jklu.campusflow.booking.dto.ConflictWithAlternativesResponse(
+                        "CONFLICT",
+                        ex.getMessage(),
+                        RequestIdFilter.getCurrentRequestId(),
+                        ex.getAlternatives(),
+                        ex.getNearbySlots()
+                );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex) {
         ErrorResponse body = new ErrorResponse(

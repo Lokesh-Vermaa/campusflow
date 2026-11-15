@@ -18,8 +18,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @Transactional(readOnly = true)
@@ -29,6 +32,11 @@ public class CampusDataService {
     private final BlockRepository blockRepository;
     private final GuestRoomRepository guestRoomRepository;
     private final ParkingZoneRepository parkingZoneRepository;
+    private final Map<UUID, AtomicInteger> allocatedPermitsByZone = new ConcurrentHashMap<>();
+
+    public void resetAllocatedPermits() {
+        allocatedPermitsByZone.clear();
+    }
 
     public CampusDataService(
             RoomRepository roomRepository,
@@ -104,8 +112,10 @@ public class CampusDataService {
         ParkingZone zone = parkingZoneRepository.findByIdForUpdate(request.zoneId())
                 .orElseThrow(() -> new ResourceNotFoundException("Parking zone not found with id: " + request.zoneId()));
 
-        if (zone.getTotalSlots() <= 0) {
-            throw new com.jklu.campusflow.common.error.ConflictException("Parking zone " + zone.getName() + " has no available capacity.");
+        AtomicInteger allocated = allocatedPermitsByZone.computeIfAbsent(zone.getId(), k -> new AtomicInteger(0));
+        if (allocated.incrementAndGet() > zone.getTotalSlots()) {
+            allocated.decrementAndGet();
+            throw new com.jklu.campusflow.common.error.ConflictException("Parking zone " + zone.getName() + " has reached maximum capacity (" + zone.getTotalSlots() + " slots).");
         }
 
         UUID permitId = UUID.randomUUID();

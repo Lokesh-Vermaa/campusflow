@@ -78,9 +78,14 @@ class SecurityMatrixTest extends BaseIntegrationTest {
             "ADMIN,     /api/admin/audit,               200",
             "STUDENT,   /api/admin/audit/export,        403",
             "STAFF,     /api/admin/audit/export,        403",
-            "ADMIN,     /api/admin/audit/export,        200"
+            "ADMIN,     /api/admin/audit/export,        200",
+            // --- Phase 4: Conversations (all authenticated roles) ---
+            "ANONYMOUS, /api/conversations,             401",
+            "STUDENT,   /api/conversations,             200",
+            "STAFF,     /api/conversations,             200",
+            "ADMIN,     /api/conversations,             200"
     })
-    @DisplayName("Security Matrix: Verify endpoint access control by role (Phase 1 + Phase 2)")
+    @DisplayName("Security Matrix: Verify endpoint access control by role (Phase 1 + Phase 2 + Phase 3 + Phase 4)")
     void testSecurityMatrix(String role, String endpoint, int expectedStatus) throws Exception {
         MockHttpServletRequestBuilder request = get(endpoint.trim());
 

@@ -3,7 +3,9 @@ package com.jklu.campusflow.booking.service;
 import com.jklu.campusflow.audit.service.AuditService;
 import com.jklu.campusflow.auth.User;
 import com.jklu.campusflow.auth.UserRepository;
+import com.jklu.campusflow.availability.service.RoomAvailabilityService;
 import com.jklu.campusflow.booking.dto.BookingResponse;
+import com.jklu.campusflow.booking.dto.ConflictWithAlternativesResponse;
 import com.jklu.campusflow.booking.dto.CreateBookingRequest;
 import com.jklu.campusflow.booking.dto.ParkingRequestItem;
 import com.jklu.campusflow.booking.model.Approval;
@@ -19,6 +21,7 @@ import com.jklu.campusflow.campus.repository.GuestRoomRepository;
 import com.jklu.campusflow.campus.repository.ParkingZoneRepository;
 import com.jklu.campusflow.campus.repository.RoomRepository;
 import com.jklu.campusflow.common.dto.PaginatedResponse;
+import com.jklu.campusflow.common.error.BookingConflictException;
 import com.jklu.campusflow.common.error.BusinessRuleException;
 import com.jklu.campusflow.common.error.ConflictException;
 import com.jklu.campusflow.common.error.ResourceNotFoundException;
@@ -53,6 +56,7 @@ public class BookingService {
     private final ParkingZoneRepository parkingZoneRepository;
     private final UserRepository userRepository;
     private final AuditService auditService;
+    private final RoomAvailabilityService roomAvailabilityService;
 
     public BookingService(
             BookingRepository bookingRepository,
@@ -62,7 +66,8 @@ public class BookingService {
             GuestRoomRepository guestRoomRepository,
             ParkingZoneRepository parkingZoneRepository,
             UserRepository userRepository,
-            AuditService auditService
+            AuditService auditService,
+            RoomAvailabilityService roomAvailabilityService
     ) {
         this.bookingRepository = bookingRepository;
         this.bookingItemRepository = bookingItemRepository;
@@ -72,6 +77,7 @@ public class BookingService {
         this.parkingZoneRepository = parkingZoneRepository;
         this.userRepository = userRepository;
         this.auditService = auditService;
+        this.roomAvailabilityService = roomAvailabilityService;
     }
 
     public BookingResponse createBooking(CreateBookingRequest request, UUID userId) {
@@ -151,7 +157,39 @@ public class BookingService {
             bookingItemRepository.saveAllAndFlush(items);
         } catch (DataIntegrityViolationException e) {
             // PostgreSQL exclusion constraint violation (ex_booking_item_no_overlap)
-            throw new ConflictException("The selected slot for room " + room.getRoomNumber() + " is already booked or held by a pending reservation.");
+            List<ConflictWithAlternativesResponse.AlternativeRoom> alternatives = new ArrayList<>();
+            List<String> nearbySlots = new ArrayList<>();
+            try {
+                if (roomAvailabilityService != null) {
+                    var avail = roomAvailabilityService.searchAvailability(
+                            request.bookingDate(), startTime, endTime,
+                            Math.max(1, room.getCapacity() - 25), null, null, user.getRole()
+                    );
+                    for (var ar : avail.availableRooms()) {
+                        if (!ar.id().equals(room.getId())) {
+                            List<String> freeWin = ar.freeWindows() != null ?
+                                    ar.freeWindows().stream().map(w -> w.startTime() + "-" + w.endTime()).toList() : List.of();
+                            alternatives.add(new ConflictWithAlternativesResponse.AlternativeRoom(
+                                    ar.id().toString(), ar.roomNumber(), ar.capacity(), ar.type(), freeWin
+                            ));
+                            if (alternatives.size() >= 3) break;
+                        }
+                    }
+                    var sched = roomAvailabilityService.getRoomSchedule(room.getId(), request.bookingDate());
+                    for (var s : sched.slots()) {
+                        if ("FREE".equals(s.status())) {
+                            nearbySlots.add(s.startTime() + " - " + s.endTime());
+                        }
+                    }
+                }
+            } catch (Exception ex) {
+                // Ignore auxiliary calculation errors and proceed with empty alternatives
+            }
+            throw new BookingConflictException(
+                    "The selected slot for room " + room.getRoomNumber() + " is already booked or held by a pending reservation.",
+                    alternatives,
+                    nearbySlots
+            );
         }
 
         auditService.record(
@@ -193,9 +231,9 @@ public class BookingService {
         Booking booking = bookingRepository.findByIdWithDetails(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found: " + bookingId));
 
-        // IDOR Check
+        // IDOR Check: Non-owner gets the EXACT same 404 as a non-existent booking ID
         if (!isAdmin && !booking.getUser().getId().equals(currentUserId)) {
-            throw new AccessDeniedException("You do not have permission to cancel another user's booking.");
+            throw new ResourceNotFoundException("Booking not found: " + bookingId);
         }
 
         if ("CANCELLED".equals(booking.getStatus()) || "REJECTED".equals(booking.getStatus())) {
