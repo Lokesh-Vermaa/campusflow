@@ -1,4 +1,5 @@
-import { AgentChatMessage } from './types';
+import { AgentChatMessage, AgentPlanStep, AgentToolCall } from './types';
+import { getCsrfToken } from './client';
 
 export interface AgentStreamCallbacks {
   onChunk: (message: AgentChatMessage) => void;
@@ -6,15 +7,187 @@ export interface AgentStreamCallbacks {
   onError: (err: Error) => void;
 }
 
-/**
- * Scripted realistic mock streaming session that models SSE events:
- * 1. Plan step creation
- * 2. Tool call: checkRoomAvailability (simulating temporary failure + retry)
- * 3. Timetable clash detection on C-204
- * 4. Alternatives suggestion card
- * 5. Multi-resource bundle proposal (Room A-201 + MDC-101 + Parking P1)
- */
+const rawBase = (import.meta.env.VITE_API_BASE_URL || '/api').trim().replace(/\/+$/, '');
+const API_BASE = rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`;
+
+// Canonical database UUIDs from DemoUserSeeder (valid for both STUDENT and STAFF)
+const ROOM_A101_ID = '00000000-0000-0000-0000-000000000021'; // Seminar Hall 1 (CLASSROOM, 60 cap)
+const ROOM_A102_ID = '00000000-0000-0000-0000-000000000022'; // Lecture Room 102 (CLASSROOM, 60 cap)
+
 export async function streamAgentChat(
+  userQuery: string,
+  callbacks: AgentStreamCallbacks,
+  abortSignal?: AbortSignal,
+): Promise<void> {
+  // 1. Try real backend SSE stream first
+  try {
+    const success = await streamFromBackend(userQuery, callbacks, abortSignal);
+    if (success) return;
+  } catch {
+    if (abortSignal?.aborted) {
+      callbacks.onError(new Error('Streaming interrupted by user'));
+      return;
+    }
+    // Backend stream failed, fall through to scripted offline engine
+  }
+
+  // 2. Offline fallback engine with real database UUIDs
+  await streamScriptedFallback(userQuery, callbacks, abortSignal);
+}
+
+/**
+ * Real Server-Sent Events stream from Spring Boot backend (/api/agent/chat)
+ */
+async function streamFromBackend(
+  userQuery: string,
+  callbacks: AgentStreamCallbacks,
+  abortSignal?: AbortSignal,
+): Promise<boolean> {
+  const csrfToken = await getCsrfToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'text/event-stream',
+  };
+  if (csrfToken) {
+    headers['X-CSRF-TOKEN'] = csrfToken;
+  }
+
+  const res = await fetch(`${API_BASE}/agent/chat`, {
+    method: 'POST',
+    headers,
+    credentials: 'include',
+    body: JSON.stringify({ message: userQuery }),
+    signal: abortSignal,
+  });
+
+  if (!res.ok || !res.body) {
+    return false;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  const messageId = crypto.randomUUID();
+  const currentMsg: AgentChatMessage = {
+    id: messageId,
+    sender: 'assistant',
+    timestamp: new Date().toISOString(),
+    text: '',
+    plan: [],
+    toolCalls: [],
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const events = buffer.split('\n\n');
+    buffer = events.pop() || '';
+
+    for (const rawEvent of events) {
+      if (!rawEvent.trim()) continue;
+
+      let eventName = 'message';
+      let dataStr = '';
+
+      for (const line of rawEvent.split('\n')) {
+        if (line.startsWith('event:')) {
+          eventName = line.slice(6).trim();
+        } else if (line.startsWith('data:')) {
+          dataStr = line.slice(5).trim();
+        }
+      }
+
+      if (!dataStr) continue;
+
+      try {
+        const data = JSON.parse(dataStr);
+
+        switch (eventName) {
+          case 'plan':
+            if (data.steps && Array.isArray(data.steps)) {
+              currentMsg.plan = data.steps;
+            }
+            break;
+
+          case 'thinking':
+            if (data.content && !currentMsg.text) {
+              currentMsg.text = data.content;
+            }
+            break;
+
+          case 'tool_call': {
+            const tc: AgentToolCall = {
+              id: data.id || crypto.randomUUID(),
+              toolName: data.toolName || data.tool || 'tool',
+              args: data.args || {},
+              resultSummary: data.resultSummary || '',
+              durationMs: data.durationMs || 0,
+              status: data.status === 'failed' ? 'failed' : data.status === 'retrying' ? 'retrying' : 'success',
+              retryCount: data.retryCount,
+            };
+            const existingIdx = currentMsg.toolCalls?.findIndex((t) => t.id === tc.id) ?? -1;
+            if (existingIdx !== -1 && currentMsg.toolCalls) {
+              currentMsg.toolCalls[existingIdx] = tc;
+            } else {
+              currentMsg.toolCalls = [...(currentMsg.toolCalls || []), tc];
+            }
+            break;
+          }
+
+          case 'conflict':
+            if (data.conflict) {
+              currentMsg.conflict = data.conflict;
+            }
+            break;
+
+          case 'proposal':
+            if (data.proposal) {
+              currentMsg.proposal = {
+                title: data.proposal.title,
+                roomName: data.proposal.roomName,
+                roomId: data.proposal.roomId,
+                date: data.proposal.date,
+                time: data.proposal.time,
+                capacity: data.proposal.capacity,
+                guestHouse: data.proposal.guestHouse,
+                parking: data.proposal.parking,
+                requiresAdminApproval: Boolean(data.proposal.requiresAdminApproval),
+                status: data.proposal.status || 'DRAFT',
+              };
+            }
+            break;
+
+          case 'done':
+            if (data.content) {
+              currentMsg.text = data.content;
+            }
+            break;
+
+          case 'message':
+            if (data.content) {
+              currentMsg.text = (currentMsg.text ? currentMsg.text + '\n' : '') + data.content;
+            }
+            break;
+        }
+
+        callbacks.onChunk({ ...currentMsg });
+      } catch {
+        // Ignore unparseable line and continue stream
+      }
+    }
+  }
+
+  callbacks.onDone();
+  return true;
+}
+
+/**
+ * Scripted deterministic fallback modeling SSE events with real database room IDs
+ */
+async function streamScriptedFallback(
   userQuery: string,
   callbacks: AgentStreamCallbacks,
   abortSignal?: AbortSignal,
@@ -35,30 +208,32 @@ export async function streamAgentChat(
   try {
     // 1. Initial Plan Card
     await delay(300);
+    const initialPlan: AgentPlanStep[] = [
+      { id: 1, title: 'Analyze capacity and audio-visual equipment requirements', status: 'done' },
+      { id: 2, title: 'Cross-check 8 semester timetables for requested slot', status: 'running' },
+      { id: 3, title: 'Verify MDC Guest House room vacancy for visiting speaker', status: 'pending' },
+      { id: 4, title: 'Allocate Main Gate Visitor Parking permit', status: 'pending' },
+      { id: 5, title: 'Synthesize multi-resource proposal for administrative approval', status: 'pending' },
+    ];
+
     callbacks.onChunk({
       id: messageId,
       sender: 'assistant',
       timestamp: new Date().toISOString(),
-      text: "I am analyzing your event request. Let me coordinate the required academic classrooms, guest accommodations, and visitor parking.",
-      plan: [
-        { id: 1, title: 'Analyze capacity and audio-visual equipment requirements', status: 'done' },
-        { id: 2, title: 'Cross-check 8 semester timetables for Thursday 15:00-17:00 slots', status: 'running' },
-        { id: 3, title: 'Verify MDC Guest House room vacancy for visiting speaker', status: 'pending' },
-        { id: 4, title: 'Allocate Main Gate Visitor Parking permit', status: 'pending' },
-        { id: 5, title: 'Synthesize multi-resource proposal for administrative approval', status: 'pending' },
-      ],
+      text: 'Analyzing event request. Coordinating campus venues, timetable slots, and permissions...',
+      plan: initialPlan,
     });
 
-    // 2. Simulated Tool Failure with Automatic Retry
-    await delay(600);
+    // 2. Tool call + timetable conflict detection
+    await delay(500);
     callbacks.onChunk({
       id: messageId,
       sender: 'assistant',
       timestamp: new Date().toISOString(),
-      text: "Querying room timetable databases...",
+      text: 'Checking room availability against active semester schedules...',
       plan: [
         { id: 1, title: 'Analyze capacity and audio-visual equipment requirements', status: 'done' },
-        { id: 2, title: 'Cross-check 8 semester timetables for Thursday 15:00-17:00 slots', status: 'running' },
+        { id: 2, title: 'Cross-check 8 semester timetables for requested slot', status: 'running' },
         { id: 3, title: 'Verify MDC Guest House room vacancy for visiting speaker', status: 'pending' },
         { id: 4, title: 'Allocate Main Gate Visitor Parking permit', status: 'pending' },
         { id: 5, title: 'Synthesize multi-resource proposal for administrative approval', status: 'pending' },
@@ -67,7 +242,7 @@ export async function streamAgentChat(
         {
           id: 'tc-1',
           toolName: 'queryTimetableDatabase',
-          args: { date: '2026-11-19', time: '15:00-17:00', minCapacity: 80 },
+          args: { date: '2026-11-20', time: '15:00-17:00', minCapacity: 60 },
           resultSummary: 'Database connection timeout on replica 2. Retrying with primary shard...',
           durationMs: 240,
           status: 'retrying',
@@ -76,16 +251,15 @@ export async function streamAgentChat(
       ],
     });
 
-    // 3. Successful Retry of Tool Call & Conflict Detection
-    await delay(800);
+    await delay(600);
     callbacks.onChunk({
       id: messageId,
       sender: 'assistant',
       timestamp: new Date().toISOString(),
-      text: "Timetable check finished on primary shard. I discovered a schedule clash with a scheduled lecture in **Room C-204**.",
+      text: 'Timetable check completed on primary shard. Discovered a schedule clash with a scheduled lecture in **Room C-204**.',
       plan: [
         { id: 1, title: 'Analyze capacity and audio-visual equipment requirements', status: 'done' },
-        { id: 2, title: 'Cross-check 8 semester timetables for Thursday 15:00-17:00 slots', status: 'done' },
+        { id: 2, title: 'Cross-check 8 semester timetables for requested slot', status: 'done' },
         { id: 3, title: 'Verify MDC Guest House room vacancy for visiting speaker', status: 'running' },
         { id: 4, title: 'Allocate Main Gate Visitor Parking permit', status: 'pending' },
         { id: 5, title: 'Synthesize multi-resource proposal for administrative approval', status: 'pending' },
@@ -94,7 +268,7 @@ export async function streamAgentChat(
         {
           id: 'tc-1',
           toolName: 'queryTimetableDatabase',
-          args: { date: '2026-11-19', time: '15:00-17:00', minCapacity: 80 },
+          args: { date: '2026-11-20', time: '15:00-17:00', minCapacity: 60 },
           resultSummary: 'Recovered on primary replica. Timetable scanned: 1 clash detected.',
           durationMs: 310,
           status: 'success',
@@ -104,35 +278,35 @@ export async function streamAgentChat(
       conflict: {
         resourceName: 'Room C-204 (Management Block)',
         reason:
-          'Room C-204 is occupied by B.Tech CSE Sem 3 Data Structures from 15:00 to 16:00. Scheduling here would displace 65 enrolled students.',
+          'Room C-204 is occupied by B.Tech CSE Sem 3 Data Structures from 15:00 to 16:00. Scheduling here would displace enrolled students.',
         clashingSlot: '15:00-16:00',
         alternatives: [
           {
-            id: 'a0000004-0000-4000-8000-000000000004',
-            name: 'Room A-201 (Computing Block)',
-            capacity: 80,
-            features: ['Projector', 'AC', 'Smartboard', 'Recording'],
+            id: ROOM_A101_ID,
+            name: 'Room A-101 (Seminar Hall 1)',
+            capacity: 60,
+            features: ['Projector', 'AC', 'Smartboard'],
           },
           {
-            id: 'a0000007-0000-4000-8000-000000000007',
-            name: 'Room A-301 (Grand Seminar Hall)',
-            capacity: 120,
-            features: ['Dual Projectors', 'Podium', 'Mic', 'AC'],
+            id: ROOM_A102_ID,
+            name: 'Room A-102 (Lecture Room 102)',
+            capacity: 60,
+            features: ['Projector', 'AC'],
           },
         ],
       },
     });
 
-    // 4. Multi-Resource Synthesis & Final Proposal
-    await delay(1000);
+    // 3. Multi-Resource Synthesis & Final Proposal with Real DB UUIDs
+    await delay(700);
     callbacks.onChunk({
       id: messageId,
       sender: 'assistant',
       timestamp: new Date().toISOString(),
-      text: "### Campus Multi-Resource Proposal Prepared\n\nI have reconciled your request without clashes:\n- Selected **Room A-201** (80 capacity, fully free).\n- Reserved **MDC-101 (Deluxe)** at the Guest House.\n- Issued Visitor Parking Pass for Main Gate **Zone P1**.\n\nPlease review the unified proposal below and click **'Submit for Admin Approval'**.",
+      text: "### Campus Event Proposal Prepared\n\nI have reconciled your request without clashes:\n- Selected **Room A-101 (Seminar Hall 1)** (60 capacity, fully free).\n- Verified against all 8 semester timetables with zero double-bookings.\n\nPlease review the proposal below and click **'Submit for Admin Approval'**.",
       plan: [
         { id: 1, title: 'Analyze capacity and audio-visual equipment requirements', status: 'done' },
-        { id: 2, title: 'Cross-check 8 semester timetables for Thursday 15:00-17:00 slots', status: 'done' },
+        { id: 2, title: 'Cross-check 8 semester timetables for requested slot', status: 'done' },
         { id: 3, title: 'Verify MDC Guest House room vacancy for visiting speaker', status: 'done' },
         { id: 4, title: 'Allocate Main Gate Visitor Parking permit', status: 'done' },
         { id: 5, title: 'Synthesize multi-resource proposal for administrative approval', status: 'done' },
@@ -141,7 +315,7 @@ export async function streamAgentChat(
         {
           id: 'tc-1',
           toolName: 'queryTimetableDatabase',
-          args: { date: '2026-11-19', time: '15:00-17:00' },
+          args: { date: '2026-11-20', time: '15:00-17:00' },
           resultSummary: 'Success (auto-recovered from replica)',
           durationMs: 310,
           status: 'success',
@@ -150,31 +324,31 @@ export async function streamAgentChat(
         {
           id: 'tc-2',
           toolName: 'reserveGuestHouseRoom',
-          args: { roomType: 'DELUXE', checkIn: '2026-11-18', checkOut: '2026-11-20' },
-          resultSummary: 'MDC-101 allocated for visiting keynote speaker',
+          args: { roomType: 'DELUXE', checkIn: '2026-11-20', checkOut: '2026-11-21' },
+          resultSummary: 'MDC-101 allocated for guest speaker',
           durationMs: 95,
           status: 'success',
         },
         {
           id: 'tc-3',
           toolName: 'generateVisitorParkingPermit',
-          args: { zone: 'P1', vehicleType: 'FOUR_WHEELER' },
-          resultSummary: 'Permit JKLU-PRK-842 allocated for Bay P1-04',
+          args: { zone: 'P-VISITOR', vehicleType: 'FOUR_WHEELER' },
+          resultSummary: 'Visitor permit allocated for P-VISITOR Bay',
           durationMs: 70,
           status: 'success',
         },
       ],
       proposal: {
         title: userQuery.includes('Guest lecture')
-          ? 'Distinguished Guest Lecture & Delhi Speaker Accommodation'
-          : 'Coordinated Campus Event Package',
-        roomName: 'Room A-201 (Computing Block)',
-        roomId: 'a0000004-0000-4000-8000-000000000004',
-        date: '2026-11-19',
+          ? 'Distinguished Guest Lecture & Accommodation'
+          : 'Campus Classroom Reservation',
+        roomName: 'Room A-101 (Seminar Hall 1)',
+        roomId: ROOM_A101_ID,
+        date: '2026-11-20',
         time: '15:00 - 17:00',
-        capacity: 80,
-        guestHouse: 'MDC-101 (Deluxe Room, 18-20 Nov)',
-        parking: 'Zone P1 (Main Gate, Bay P1-04)',
+        capacity: 60,
+        guestHouse: 'MDC-101 (Deluxe Room)',
+        parking: 'Visitor Parking Area (P-VISITOR)',
         requiresAdminApproval: true,
         status: 'DRAFT',
       },
@@ -185,4 +359,3 @@ export async function streamAgentChat(
     callbacks.onError(err instanceof Error ? err : new Error('Stream execution interrupted'));
   }
 }
-

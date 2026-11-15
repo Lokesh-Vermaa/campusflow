@@ -19,12 +19,17 @@ interface ProposalCardProps {
 export function ProposalCard({ proposal, onSubmitForApproval }: ProposalCardProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(proposal.status === 'SUBMITTED');
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       await onSubmitForApproval(proposal);
       setSubmitted(true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to submit booking for approval.';
+      setSubmitError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -106,16 +111,23 @@ export function ProposalCard({ proposal, onSubmitForApproval }: ProposalCardProp
             <span>Successfully Routed to Admin Queue (Ref #JKLU-BK-PROPOSAL)</span>
           </div>
         ) : (
-          <Button
-            type="button"
-            onClick={handleSubmit}
-            variant="orange"
-            className="w-full font-bold text-text-heading shadow-sm"
-            disabled={isSubmitting}
-          >
-            <Send className="mr-2 h-4 w-4" aria-hidden="true" />
-            {isSubmitting ? 'Routing to Admin Queue...' : 'Submit for Admin Approval'}
-          </Button>
+          <>
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              variant="orange"
+              className="w-full font-bold text-text-heading shadow-sm"
+              disabled={isSubmitting}
+            >
+              <Send className="mr-2 h-4 w-4" aria-hidden="true" />
+              {isSubmitting ? 'Routing to Admin Queue...' : 'Submit for Admin Approval'}
+            </Button>
+            {submitError && (
+              <p className="mt-2 text-center text-xs font-medium text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                {submitError}
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>

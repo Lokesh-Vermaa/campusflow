@@ -401,16 +401,25 @@ export function AgentChatPage() {
   const handleSelectAlternative = (name: string) => handleSend(`Switch the venue to ${name} and proceed.`);
 
   const handleSubmitProposal = async (proposal: AgentProposal) => {
+    const timeParts = proposal.time.split(/\s*[-–]\s*|\s+to\s+/i);
+    const rawStart = timeParts[0]?.trim() || '09:00';
+    const rawEnd = timeParts[1]?.trim() || '10:00';
+    const startTime = rawStart.length === 5 ? rawStart : rawStart.padStart(5, '0');
+    const endTime = rawEnd.length === 5 ? rawEnd : rawEnd.padStart(5, '0');
+
     await bookingsApi.create({
       title: proposal.title,
       description: 'Agent-coordinated multi-resource allocation',
-      resourceType: 'MULTI_RESOURCE',
+      resourceType: 'ROOM',
       resourceId: proposal.roomId,
       bookingDate: proposal.date,
-      startTime: proposal.time.split(' - ')[0],
-      endTime: proposal.time.split(' - ')[1],
+      startTime,
+      endTime,
       expectedAttendees: proposal.capacity,
     });
+
+    queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    queryClient.invalidateQueries({ queryKey: ['admin', 'approvals'] });
   };
 
   const firstName = user?.name?.split(' ')[0] ?? 'there';
