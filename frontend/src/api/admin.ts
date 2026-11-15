@@ -1,12 +1,20 @@
 import { apiClient } from './client';
+import { z } from 'zod';
 import {
   ApproveBookingRequestSchema,
-  Booking,
-  BookingSchema,
   PaginatedBookingsResponse,
   PaginatedBookingsResponseSchema,
   RejectBookingRequestSchema,
 } from './types';
+
+// Simple response schema that matches what the backend actually returns
+// for approve/reject: { id, status, message }
+const ApprovalActionResponseSchema = z.object({
+  id: z.string(),
+  status: z.string(),
+  message: z.string(),
+});
+type ApprovalActionResponse = z.infer<typeof ApprovalActionResponseSchema>;
 
 export interface TimetableUploadResponse {
   totalRows: number;
@@ -42,21 +50,21 @@ export const adminApi = {
     });
   },
 
-  approveBooking: async (bookingId: string, note?: string): Promise<Booking> => {
+  approveBooking: async (bookingId: string, note?: string): Promise<ApprovalActionResponse> => {
     const payload = ApproveBookingRequestSchema.parse({ note });
-    return apiClient<Booking>(`/admin/approvals/${bookingId}/approve`, {
+    return apiClient<ApprovalActionResponse>(`/admin/approvals/${bookingId}/approve`, {
       method: 'POST',
       body: JSON.stringify(payload),
-      schema: BookingSchema,
+      schema: ApprovalActionResponseSchema,
     });
   },
 
-  rejectBooking: async (bookingId: string, reason: string): Promise<Booking> => {
+  rejectBooking: async (bookingId: string, reason: string): Promise<ApprovalActionResponse> => {
     const payload = RejectBookingRequestSchema.parse({ reason });
-    return apiClient<Booking>(`/admin/approvals/${bookingId}/reject`, {
+    return apiClient<ApprovalActionResponse>(`/admin/approvals/${bookingId}/reject`, {
       method: 'POST',
       body: JSON.stringify(payload),
-      schema: BookingSchema,
+      schema: ApprovalActionResponseSchema,
     });
   },
 
