@@ -33,13 +33,13 @@ public class AgentRequestParser {
 
         String lower = message.toLowerCase().trim();
 
-        // 1. Headcount parsing: e.g. "80 people", "for 40 people", "40 students", "capacity 100", "for 40"
+        // 1. Headcount parsing: e.g. "80 people", "for 40 people", "40 students", "capacity 100", "for 40", "80 ppl"
         Integer headcount = null;
-        Matcher hcMatcher = Pattern.compile("(\\d+)\\s*(?:people|attendees|students|persons|participants|capacity)").matcher(lower);
+        Matcher hcMatcher = Pattern.compile("(\\d+)\\s*(?:people|peopl|ppl|attendees|students|persons|persns|participants|capacity|seats)\\b").matcher(lower);
         if (hcMatcher.find()) {
             headcount = Integer.parseInt(hcMatcher.group(1));
         } else {
-            Matcher altHc = Pattern.compile("for\\s+(\\d+)(?:\\s+people)?\\b").matcher(lower);
+            Matcher altHc = Pattern.compile("for\\s+(\\d+)(?:\\s+(?:people|peopl|ppl))?\\b").matcher(lower);
             if (altHc.find()) {
                 headcount = Integer.parseInt(altHc.group(1));
             }
@@ -68,38 +68,60 @@ public class AgentRequestParser {
         } else if (lower.contains("today")) {
             date = baseDate;
         } else {
-            // Check YYYY-MM-DD
-            Matcher dateMatcher = Pattern.compile("(\\d{4}-\\d{2}-\\d{2})").matcher(lower);
-            if (dateMatcher.find()) {
-                date = LocalDate.parse(dateMatcher.group(1));
+            // Check bare weekday e.g. "on friday", "thursday"
+            for (DayOfWeek dow : DayOfWeek.values()) {
+                if (lower.contains(dow.name().toLowerCase())) {
+                    date = baseDate.with(TemporalAdjusters.nextOrSame(dow));
+                    break;
+                }
+            }
+            if (date == null) {
+                // Check YYYY-MM-DD
+                Matcher dateMatcher = Pattern.compile("(\\d{4}-\\d{2}-\\d{2})").matcher(lower);
+                if (dateMatcher.find()) {
+                    date = LocalDate.parse(dateMatcher.group(1));
+                }
             }
         }
 
-        // 3. Time parsing: e.g. "3-5 pm", "3–5 pm", "3 to 5 pm", "15:00 to 17:00", "10-11 am", "10:00 - 11:00"
+        // 3. Time parsing: e.g. "3-5 pm", "3–5 pm", "3 to 5 pm", "3pm to 5pm", "3pm-5pm", "10-11 am", "10am to 11am"
         LocalTime startTime = null;
         LocalTime endTime = null;
 
-        Matcher rangeMatcher = Pattern.compile("(?<![-:\\d])(\\d{1,2})(?::(\\d{2}))?\\s*(?:-|–|to)\\s*(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)?(?![-\\d])").matcher(lower);
+        Matcher rangeMatcher = Pattern.compile("(?<![-:\\d])(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)?\\s*(?:-|–|to)\\s*(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)?(?![-\\d])").matcher(lower);
         if (rangeMatcher.find()) {
             int startH = Integer.parseInt(rangeMatcher.group(1));
             int startM = rangeMatcher.group(2) != null ? Integer.parseInt(rangeMatcher.group(2)) : 0;
-            int endH = Integer.parseInt(rangeMatcher.group(3));
-            int endM = rangeMatcher.group(4) != null ? Integer.parseInt(rangeMatcher.group(4)) : 0;
-            String amPm = rangeMatcher.group(5);
+            String startAmPm = rangeMatcher.group(3);
+            int endH = Integer.parseInt(rangeMatcher.group(4));
+            int endM = rangeMatcher.group(5) != null ? Integer.parseInt(rangeMatcher.group(5)) : 0;
+            String endAmPm = rangeMatcher.group(6);
 
-            if ("pm".equalsIgnoreCase(amPm)) {
-                if (startH < 12) startH += 12;
-                if (endH < 12) endH += 12;
-            } else if ("am".equalsIgnoreCase(amPm)) {
-                if (startH == 12) startH = 0;
-                if (endH == 12) endH = 0;
-            } else {
-                // If startH between 1 and 6 and endH between 1 and 7, assume PM
+            if ("pm".equalsIgnoreCase(startAmPm) && startH < 12) {
+                startH += 12;
+            } else if ("am".equalsIgnoreCase(startAmPm) && startH == 12) {
+                startH = 0;
+            }
+
+            if ("pm".equalsIgnoreCase(endAmPm) && endH < 12) {
+                endH += 12;
+            } else if ("am".equalsIgnoreCase(endAmPm) && endH == 12) {
+                endH = 0;
+            }
+
+            // If startAmPm was omitted but endAmPm is PM (e.g. "3 to 5 pm")
+            if (startAmPm == null && "pm".equalsIgnoreCase(endAmPm)) {
+                if (startH < 12 && (startH >= 1 && startH <= 7 || startH <= endH)) {
+                    startH += 12;
+                }
+            } else if (startAmPm == null && endAmPm == null) {
+                // If both omitted and hours are 1..7, default to PM
                 if (startH >= 1 && startH <= 6 && endH >= startH && endH <= 7) {
                     startH += 12;
                     endH += 12;
                 }
             }
+
             if (startH >= 0 && startH <= 23 && endH >= 0 && endH <= 23) {
                 startTime = LocalTime.of(startH, startM);
                 endTime = LocalTime.of(endH, endM);

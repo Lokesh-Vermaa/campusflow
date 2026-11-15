@@ -399,12 +399,25 @@ public class ScriptedPlanner {
     }
 
     private void handleClarifyingRequest(SseEmitter emitter, String rawUserMessage, UUID userId, String entityId) throws IOException {
-        recordAuditReasoning(userId, entityId, "User request missing required slot parameters (date, time, or headcount). Awaiting user clarification.");
+        String lower = rawUserMessage != null ? rawUserMessage.toLowerCase() : "";
+        boolean isPromptInjection = lower.contains("ignore previous") || lower.contains("system prompt") || lower.contains("drop table") || lower.contains("disregard");
+        boolean isOffTopic = lower.contains("poem") || lower.contains("joke") || lower.contains("weather") || lower.contains("capital of") || lower.contains("recipe");
+
+        String clarificationText;
+        if (isPromptInjection) {
+            clarificationText = "I am the CampusFlow AI assistant. I operate strictly under campus governance and scheduling policies. Please specify a campus venue, date, time, and attendee count to plan a reservation.";
+        } else if (isOffTopic) {
+            clarificationText = "I am specialized in campus venue reservations, MDC Guest House bookings, visitor parking, and campus scheduling policies. Here is what I can do: help you find free classrooms, reserve guest rooms, or allocate visitor parking. Please provide an event date, time, and attendee count.";
+        } else {
+            clarificationText = "I would be glad to coordinate your reservation. Could you please specify:\n1. The event date (e.g. next Thursday, tomorrow, or YYYY-MM-DD)\n2. Start and end times (e.g. 10-11 AM or 3pm to 5pm)\n3. Expected attendee count (e.g. 80 people)\n\nPlease also mention if guest house stay or parking is needed.";
+        }
+
+        recordAuditReasoning(userId, entityId, "User request missing required slot parameters or off-topic: " + (isPromptInjection ? "prompt_injection" : (isOffTopic ? "off_topic" : "missing_slot")));
         sendEvent(emitter, "plan", toJson(Map.of("steps", List.of(
                 Map.of("id", 1, "title", "Clarify missing event specifications", "status", "running")
         ))));
-        sendEvent(emitter, "thinking", toJson(Map.of("content", "Checking event parameters... Missing required date, time or headcount.")));
-        sendEvent(emitter, "done", toJson(Map.of("content", "I would be glad to coordinate your reservation. Could you please specify:\n1. The event date (e.g. next Thursday or YYYY-MM-DD)\n2. Start and end times (e.g. 10-11 AM or 3-5 PM)\n3. Expected attendee count\n\nPlease also mention if guest house stay or parking is needed.")));
+        sendEvent(emitter, "thinking", toJson(Map.of("content", "Evaluating request... Needs clarification on date, time, or headcount.")));
+        sendEvent(emitter, "done", toJson(Map.of("content", clarificationText)));
         emitter.complete();
     }
 

@@ -1,4 +1,34 @@
-# CampusFlow Demo Script
+# CampusFlow Demo Script & Presentation Guide
+
+## Before the Presentation (Pre-Flight Checklist)
+
+Run through these 6 checks 15 minutes before presenting to the jury:
+
+- [ ] **Reset Demo Database**: Run `powershell -File scripts/reset-demo.ps1` to ensure fresh, clean sample data (25 rooms, 163 timetable slots, 12 guest rooms, 3 parking zones, and no lingering dirty bookings).
+- [ ] **Start Services in Correct Order**:
+  1. **PostgreSQL 16**: Running on `localhost:5432`.
+  2. **Spring Boot Backend**:
+     ```powershell
+     cd backend
+     $env:SPRING_PROFILES_ACTIVE="dev,demo"
+     .\mvnw.cmd spring-boot:run
+     ```
+     Verify console shows: `Tomcat started on port 8080 (http)` and `Demo users synced (demo profile)`.
+  3. **Vite Frontend**:
+     ```powershell
+     cd frontend
+     npm run dev
+     ```
+- [ ] **Prepare Browser Tabs**:
+  - **Tab 1 (Staff Persona)**: [http://localhost:5173/login](http://localhost:5173/login) (ready to click `staff@demo.jklu.test`).
+  - **Tab 2 (Incognito / Admin Persona)**: [http://localhost:5173/login](http://localhost:5173/login) (ready to click `admin@demo.jklu.test`).
+  - **Tab 3 (Swagger / API Docs if asked)**: [http://localhost:8080/api/content/announcement](http://localhost:8080/api/content/announcement).
+- [ ] **Backup Offline Video / Screen Recording**: Keep a local 2-minute MP4 screen recording of the guest lecture flow in `docs/screenshots/` in case the display projector or laptop experiences unexpected hiccups.
+- [ ] **What to Say if External Network / WiFi is Down**:
+  > *"CampusFlow is deliberately architected with an offline-first deterministic planning engine. The AI agent, availability engine, timetable conflict detection, guest house reservation, and parking allocation run 100% locally on real campus database algorithms without requiring an external internet connection or cloud LLM API."*
+- [ ] **Ensure Theme Consistency**: Toggle the theme switch (top-right) to either Dark or Light mode according to presentation room lighting.
+
+---
 
 ## Guaranteed Demo Facts
 
