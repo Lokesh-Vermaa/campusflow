@@ -24,9 +24,18 @@ campusflow/
 │   ├── docs/             # API Contract & Security Checklist
 │   ├── package.json      # Dependencies and build scripts
 │   └── README.md         # Detailed Frontend documentation & demo flows
-└── backend/              # Java Spring Boot 3.x + PostgreSQL (In Progress)
-    └── .gitkeep
+└── backend/              # Spring Boot 3.5.16 + Java 26 (release=21 bytecode) + PostgreSQL 16
+    ├── src/              # Java backend sources and Flyway migrations
+    ├── docs/             # Backend Architecture & Learning Notes
+    └── pom.xml           # Pinned dependencies & Maven configuration
 ```
+
+### Backend Toolchain & Runtime
+- **JDK Runtime**: JDK 26 (`26.0.2`).
+- **Bytecode Target**: Java 21 LTS (`release=21`, bytecode version 65) for full compatibility with Spring ASM classpath scanning and ByteBuddy.
+- **Spring Boot**: `3.5.16`.
+- **Database**: PostgreSQL 16 with `btree_gist` extension on port 5432.
+- **LLM Engine**: Custom `RestClient` implementation behind `AgentPlanner` interface.
 
 ---
 
