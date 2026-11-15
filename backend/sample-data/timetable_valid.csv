@@ -1,0 +1,6 @@
+course,room,day,start,end,section,faculty,term
+CS201,A-101,Monday,09:00,10:00,Sec A,Dr. Neha Verma,Spring 2027
+CS202,A-102,Tuesday,10:00,11:00,Sec B,Prof. Sharma,Spring 2027
+CS301,T-101,Wednesday,11:00,13:00,Lab 1,Dr. Amit Sengupta,Spring 2027
+CS302,M-101,Thursday,14:00,15:30,Sec A,Dr. Priya Nair,Spring 2027
+CS401,A-201,Friday,15:30,17:00,Auditorium,Prof. Rajesh Patel,Spring 2027

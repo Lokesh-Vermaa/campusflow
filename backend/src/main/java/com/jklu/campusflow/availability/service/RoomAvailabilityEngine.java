@@ -29,6 +29,21 @@ public class RoomAvailabilityEngine {
             UUID blockId,
             List<String> requiredFeatures
     ) {
+        return evaluateAvailability(rooms, timetableSlots, activeBookings, date, requestedStartTime, requestedEndTime, minCapacity, blockId, requiredFeatures, null);
+    }
+
+    public AvailabilityResponse evaluateAvailability(
+            List<Room> rooms,
+            List<TimetableSlot> timetableSlots,
+            List<BookingItem> activeBookings,
+            LocalDate date,
+            LocalTime requestedStartTime,
+            LocalTime requestedEndTime,
+            Integer minCapacity,
+            UUID blockId,
+            List<String> requiredFeatures,
+            String userRole
+    ) {
         int reqStart = requestedStartTime.getHour() * 60 + requestedStartTime.getMinute();
         int reqEnd = requestedEndTime.getHour() * 60 + requestedEndTime.getMinute();
         TimeIntervalDto requestedInterval = new TimeIntervalDto(formatTime(reqStart), formatTime(reqEnd));
@@ -59,6 +74,16 @@ public class RoomAvailabilityEngine {
         List<UnavailableRoomDto> unavailableRooms = new ArrayList<>();
 
         for (Room room : rooms) {
+            // Inactive and non-bookable-outside exclusion
+            if (!room.isActive() || !room.isBookableOutside()) {
+                continue;
+            }
+
+            // Role filtering: STUDENT sees only classrooms; STAFF/ADMIN also see labs & amphitheatres
+            if (userRole != null && "STUDENT".equalsIgnoreCase(userRole) && !"CLASSROOM".equalsIgnoreCase(room.getType())) {
+                continue;
+            }
+
             // Apply filtering criteria
             if (minCapacity != null && room.getCapacity() < minCapacity) {
                 continue;

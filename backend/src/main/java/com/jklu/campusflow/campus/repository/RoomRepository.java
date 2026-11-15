@@ -27,4 +27,6 @@ public interface RoomRepository extends JpaRepository<Room, UUID> {
 
     @Query("SELECT r FROM Room r JOIN FETCH r.block WHERE r.active = true AND r.type = 'CLASSROOM' ORDER BY r.roomNumber ASC")
     List<Room> findAllActiveClassroomsWithBlock();
+
+    boolean existsByBlockIdAndRoomNumber(UUID blockId, String roomNumber);
 }

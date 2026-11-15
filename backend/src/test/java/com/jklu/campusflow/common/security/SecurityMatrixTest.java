@@ -51,7 +51,34 @@ class SecurityMatrixTest extends BaseIntegrationTest {
             "ANONYMOUS, /api/admin/master/rooms,        401",
             "STUDENT,   /api/admin/master/rooms,        403",
             "STAFF,     /api/admin/master/rooms,        403",
-            "ADMIN,     /api/admin/master/rooms,        200"
+            "ADMIN,     /api/admin/master/rooms,        200",
+            "STUDENT,   /api/admin/master/blocks,       403",
+            "STAFF,     /api/admin/master/blocks,       403",
+            "ADMIN,     /api/admin/master/blocks,       200",
+            "STUDENT,   /api/admin/master/guesthouse,   403",
+            "STAFF,     /api/admin/master/guesthouse,   403",
+            "ADMIN,     /api/admin/master/guesthouse,   200",
+            "STUDENT,   /api/admin/master/parking,      403",
+            "STAFF,     /api/admin/master/parking,      403",
+            "ADMIN,     /api/admin/master/parking,      200",
+            // --- Phase 3: Bookings /my (authenticated only) ---
+            "ANONYMOUS, /api/bookings/my,               401",
+            "STUDENT,   /api/bookings/my,               200",
+            "STAFF,     /api/bookings/my,               200",
+            "ADMIN,     /api/bookings/my,               200",
+            // --- Phase 3: Admin Approvals Queue (ADMIN only) ---
+            "ANONYMOUS, /api/admin/approvals,           401",
+            "STUDENT,   /api/admin/approvals,           403",
+            "STAFF,     /api/admin/approvals,           403",
+            "ADMIN,     /api/admin/approvals,           200",
+            // --- Phase 3: Admin Audit Logs (ADMIN only) ---
+            "ANONYMOUS, /api/admin/audit,               401",
+            "STUDENT,   /api/admin/audit,               403",
+            "STAFF,     /api/admin/audit,               403",
+            "ADMIN,     /api/admin/audit,               200",
+            "STUDENT,   /api/admin/audit/export,        403",
+            "STAFF,     /api/admin/audit/export,        403",
+            "ADMIN,     /api/admin/audit/export,        200"
     })
     @DisplayName("Security Matrix: Verify endpoint access control by role (Phase 1 + Phase 2)")
     void testSecurityMatrix(String role, String endpoint, int expectedStatus) throws Exception {

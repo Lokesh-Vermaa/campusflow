@@ -59,4 +59,35 @@ public class MasterDataController {
             default -> throw new ResourceNotFoundException("Unknown master resource: " + resource);
         };
     }
+
+    @PostMapping("/rooms")
+    public ResponseEntity<?> createRoom(@jakarta.validation.Valid @RequestBody com.jklu.campusflow.campus.dto.CreateRoomRequest req) {
+        Block block = blockRepository.findById(req.blockId())
+                .orElseThrow(() -> new ResourceNotFoundException("Block not found with id: " + req.blockId()));
+
+        if (roomRepository.existsByBlockIdAndRoomNumber(req.blockId(), req.roomNumber().trim())) {
+            throw new com.jklu.campusflow.common.error.ConflictException("Room number " + req.roomNumber() + " already exists in block " + block.getName());
+        }
+
+        Room room = new Room(
+                UUID.randomUUID(),
+                block,
+                req.roomNumber().trim(),
+                req.name(),
+                req.type(),
+                req.capacity(),
+                req.features(),
+                req.active() != null ? req.active() : true,
+                req.bookableOutside() != null ? req.bookableOutside() : true
+        );
+        room = roomRepository.save(room);
+
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(Map.of(
+                "id", room.getId(),
+                "roomNumber", room.getRoomNumber(),
+                "block", block.getName(),
+                "capacity", room.getCapacity(),
+                "type", room.getType()
+        ));
+    }
 }

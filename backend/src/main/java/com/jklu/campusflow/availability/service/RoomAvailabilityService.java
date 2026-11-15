@@ -49,6 +49,18 @@ public class RoomAvailabilityService {
             UUID blockId,
             String featuresCsv
     ) {
+        return searchAvailability(date, startTime, endTime, minCapacity, blockId, featuresCsv, null);
+    }
+
+    public AvailabilityResponse searchAvailability(
+            LocalDate date,
+            LocalTime startTime,
+            LocalTime endTime,
+            Integer minCapacity,
+            UUID blockId,
+            String featuresCsv,
+            String userRole
+    ) {
         List<String> requiredFeatures = null;
         if (featuresCsv != null && !featuresCsv.isBlank()) {
             requiredFeatures = Arrays.stream(featuresCsv.split(","))
@@ -75,7 +87,8 @@ public class RoomAvailabilityService {
                 endTime,
                 minCapacity,
                 blockId,
-                requiredFeatures
+                requiredFeatures,
+                userRole
         );
     }
 

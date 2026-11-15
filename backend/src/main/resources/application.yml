@@ -3,8 +3,17 @@ spring:
     name: campusflow-backend
   profiles:
     default: dev
+  config:
+    import: "optional:file:.env[.properties]"
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/campusflow}
+    username: ${DB_USER:campusflow}
+    password: ${DB_PASSWORD:devpass}
+    driver-class-name: org.postgresql.Driver
   jackson:
     time-zone: Asia/Kolkata
+    deserialization:
+      fail-on-unknown-properties: true
   jpa:
     open-in-view: false
     hibernate:
@@ -26,6 +35,11 @@ spring:
 
 server:
   port: 8080
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+    include-exception: false
   servlet:
     context-path: /
     session:

@@ -143,7 +143,7 @@ class CampusDataControllerTest extends BaseIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.permitId").exists())
                 .andExpect(jsonPath("$.permitCode").value(org.hamcrest.Matchers.startsWith("JKLU-PARK-")))
-                .andExpect(jsonPath("$.status").value("ALLOCATED"))
+                .andExpect(jsonPath("$.status").value("PENDING"))
                 .andExpect(jsonPath("$.allocatedSlot").exists());
     }
 
@@ -187,10 +187,10 @@ class CampusDataControllerTest extends BaseIntegrationTest {
                         "CS401",
                         "A-101",
                         1,
-                        "11:00",
-                        "12:00",
-                        660,
-                        720,
+                        "13:00",
+                        "14:00",
+                        780,
+                        840,
                         "A",
                         "Dr. Neha",
                         "Spring 2027",
@@ -215,5 +215,53 @@ class CampusDataControllerTest extends BaseIntegrationTest {
         mockMvc.perform(get("/api/admin/master/rooms"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))));
+    }
+
+    @Test
+    @WithMockUser(username = "admin@demo.jklu.test", roles = {"ADMIN"})
+    @DisplayName("B7: POST /api/admin/master/rooms rejects capacity <= 0 with 400")
+    void testMasterDataRejectsZeroCapacity() throws Exception {
+        Room existing = roomRepository.findAllActiveWithBlock().get(0);
+        com.jklu.campusflow.campus.dto.CreateRoomRequest req = new com.jklu.campusflow.campus.dto.CreateRoomRequest(
+                existing.getBlock().getId(),
+                "Z-999",
+                "Invalid Room",
+                "CLASSROOM",
+                0, // invalid capacity <= 0
+                List.of("projector"),
+                true,
+                true
+        );
+
+        mockMvc.perform(post("/api/admin/master/rooms")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "admin@demo.jklu.test", roles = {"ADMIN"})
+    @DisplayName("B7: POST /api/admin/master/rooms rejects duplicate room in same block with 409 Conflict")
+    void testMasterDataRejectsDuplicateRoomInBlock() throws Exception {
+        Room existing = roomRepository.findAllActiveWithBlock().get(0);
+        com.jklu.campusflow.campus.dto.CreateRoomRequest req = new com.jklu.campusflow.campus.dto.CreateRoomRequest(
+                existing.getBlock().getId(),
+                existing.getRoomNumber(), // duplicate
+                "Duplicate Room",
+                "CLASSROOM",
+                50,
+                List.of("projector"),
+                true,
+                true
+        );
+
+        mockMvc.perform(post("/api/admin/master/rooms")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"));
     }
 }

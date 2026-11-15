@@ -177,4 +177,143 @@ class RoomAvailabilityEngineTest {
         assertThat(busySlot.startTime()).isEqualTo("09:00");
         assertThat(busySlot.endTime()).isEqualTo("10:00");
     }
+
+    // -----------------------------------------------------------------------
+    // B3 Test 6: Inactive rooms are excluded from availability search
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("B3: Inactive rooms are excluded from availability search")
+    void testInactiveRoomIsExcluded() {
+        Room activeRoom = makeRoom("A-101", "CLASSROOM", 50, List.of("projector"));
+        Room inactiveRoom = makeRoom("A-102", "CLASSROOM", 50, List.of("projector"));
+        inactiveRoom.setActive(false);
+
+        AvailabilityResponse resp = engine.evaluateAvailability(
+                List.of(activeRoom, inactiveRoom),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                LocalDate.of(2026, 11, 16),
+                LocalTime.of(10, 0),
+                LocalTime.of(11, 0),
+                null, null, null
+        );
+
+        assertThat(resp.availableRooms()).hasSize(1);
+        assertThat(resp.availableRooms().get(0).roomNumber()).isEqualTo("A-101");
+        assertThat(resp.unavailableRooms()).isEmpty();
+    }
+
+    // -----------------------------------------------------------------------
+    // B3 Test 7: Non-bookable-outside rooms are excluded from availability search
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("B3: Rooms not bookable outside are excluded from external availability search")
+    void testNonBookableOutsideRoomIsExcluded() {
+        Room bookable = makeRoom("A-101", "CLASSROOM", 50, List.of("projector"));
+        Room notBookable = makeRoom("A-102", "CLASSROOM", 50, List.of("projector"));
+        notBookable.setBookableOutside(false);
+
+        AvailabilityResponse resp = engine.evaluateAvailability(
+                List.of(bookable, notBookable),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                LocalDate.of(2026, 11, 16),
+                LocalTime.of(10, 0),
+                LocalTime.of(11, 0),
+                null, null, null
+        );
+
+        assertThat(resp.availableRooms()).hasSize(1);
+        assertThat(resp.availableRooms().get(0).roomNumber()).isEqualTo("A-101");
+    }
+
+    // -----------------------------------------------------------------------
+    // B3 Test 8: Role filtering - STUDENT sees only classrooms
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("B3: Role filtering ensures STUDENT sees only CLASSROOM rooms (labs/amphitheatres excluded)")
+    void testRoleFilteringStudentSeesOnlyClassrooms() {
+        Room classroom = makeRoom("A-101", "CLASSROOM", 50, Collections.emptyList());
+        Room lab = makeRoom("T-101", "LAB", 40, Collections.emptyList());
+        Room amphi = makeRoom("T-201", "AMPHITHEATRE", 120, Collections.emptyList());
+
+        AvailabilityResponse resp = engine.evaluateAvailability(
+                List.of(classroom, lab, amphi),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                LocalDate.of(2026, 11, 16),
+                LocalTime.of(10, 0),
+                LocalTime.of(11, 0),
+                null, null, null,
+                "STUDENT"
+        );
+
+        assertThat(resp.availableRooms()).hasSize(1);
+        assertThat(resp.availableRooms().get(0).roomNumber()).isEqualTo("A-101");
+    }
+
+    // -----------------------------------------------------------------------
+    // B3 Test 9: Role filtering - STAFF sees classrooms, labs, and amphitheatres
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("B3: Role filtering allows STAFF to see classrooms, labs, and amphitheatres")
+    void testRoleFilteringStaffSeesLabsAndAmphitheatres() {
+        Room classroom = makeRoom("A-101", "CLASSROOM", 50, Collections.emptyList());
+        Room lab = makeRoom("T-101", "LAB", 40, Collections.emptyList());
+        Room amphi = makeRoom("T-201", "AMPHITHEATRE", 120, Collections.emptyList());
+
+        AvailabilityResponse resp = engine.evaluateAvailability(
+                List.of(classroom, lab, amphi),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                LocalDate.of(2026, 11, 16),
+                LocalTime.of(10, 0),
+                LocalTime.of(11, 0),
+                null, null, null,
+                "STAFF"
+        );
+
+        assertThat(resp.availableRooms()).hasSize(3);
+    }
+
+    // -----------------------------------------------------------------------
+    // B3 Test 10: Asia/Kolkata timezone edges and booking boundary
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("B3: Asia/Kolkata timezone offset is correctly evaluated for booking time window")
+    void testAsiaKolkataTimezoneEdgeIntervals() {
+        Room room = makeRoom("A-101", "CLASSROOM", 60, Collections.emptyList());
+        // Booking strictly 09:00 to 10:00 IST
+        BookingItem booking = makeBooking(room.getId(), 9, 10);
+
+        // Request 10:00 to 11:00 IST (touching interval) -> Available!
+        AvailabilityResponse respTouching = engine.evaluateAvailability(
+                List.of(room),
+                Collections.emptyList(),
+                List.of(booking),
+                LocalDate.of(2026, 11, 12),
+                LocalTime.of(10, 0),
+                LocalTime.of(11, 0),
+                null, null, null
+        );
+        assertThat(respTouching.availableRooms()).hasSize(1);
+
+        // Request 09:30 to 10:30 IST (overlapping interval) -> Unavailable!
+        AvailabilityResponse respOverlap = engine.evaluateAvailability(
+                List.of(room),
+                Collections.emptyList(),
+                List.of(booking),
+                LocalDate.of(2026, 11, 12),
+                LocalTime.of(9, 30),
+                LocalTime.of(10, 30),
+                null, null, null
+        );
+        assertThat(respOverlap.availableRooms()).isEmpty();
+        assertThat(respOverlap.unavailableRooms()).hasSize(1);
+    }
 }

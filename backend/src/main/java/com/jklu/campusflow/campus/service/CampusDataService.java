@@ -101,8 +101,12 @@ public class CampusDataService {
 
     @Transactional
     public ParkingPermitResponse requestParkingPermit(ParkingPermitRequest request, Authentication auth) {
-        ParkingZone zone = parkingZoneRepository.findById(request.zoneId())
+        ParkingZone zone = parkingZoneRepository.findByIdForUpdate(request.zoneId())
                 .orElseThrow(() -> new ResourceNotFoundException("Parking zone not found with id: " + request.zoneId()));
+
+        if (zone.getTotalSlots() <= 0) {
+            throw new com.jklu.campusflow.common.error.ConflictException("Parking zone " + zone.getName() + " has no available capacity.");
+        }
 
         UUID permitId = UUID.randomUUID();
         int randomSeq = ThreadLocalRandom.current().nextInt(100, 999);
@@ -115,7 +119,7 @@ public class CampusDataService {
         return new ParkingPermitResponse(
                 permitId,
                 permitCode,
-                "ALLOCATED",
+                "PENDING",
                 allocatedSlot,
                 validUntil
         );

@@ -98,4 +98,42 @@ class TimetableParserTest {
         assertThat(result.rows().get(0).roomNumber()).isEqualTo("T-101");
         assertThat(result.rows().get(0).dayOfWeek()).isEqualTo(3);
     }
+
+    @Test
+    @DisplayName("B1: PDF file is rejected with UnsupportedMediaTypeException (415)")
+    void testPdfRejected() {
+        byte[] pdfBytes = "%PDF-1.4 Fake PDF Content".getBytes(StandardCharsets.UTF_8);
+        ByteArrayInputStream in = new ByteArrayInputStream(pdfBytes);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> parser.parse(in, "timetable.pdf", "Spring 2027", activeRooms))
+                .isInstanceOf(com.jklu.campusflow.common.error.UnsupportedMediaTypeException.class)
+                .hasMessageContaining("PDF import not supported yet");
+    }
+
+    @Test
+    @DisplayName("B1: Disguised executable (.exe renamed .csv) is rejected")
+    void testDisguisedExecutableRejected() {
+        byte[] exeBytes = new byte[]{'M', 'Z', 0, 0, 1, 2, 3, 4}; // MZ header
+        ByteArrayInputStream in = new ByteArrayInputStream(exeBytes);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> parser.parse(in, "malicious.csv", "Spring 2027", activeRooms))
+                .isInstanceOf(com.jklu.campusflow.common.error.BusinessRuleException.class)
+                .hasMessageContaining("Disguised executable");
+    }
+
+    @Test
+    @DisplayName("B1: Formula injection values starting with =, +, -, @ are sanitized with leading quote")
+    void testFormulaInjectionSanitization() throws Exception {
+        String csv = """
+                course,room,day,start,end,section,faculty
+                =SUM(1+1),A-101,Monday,09:00,10:00,+admin,@attacker
+                """;
+
+        ByteArrayInputStream in = new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8));
+        TimetableParser.ParseResult result = parser.parse(in, "formulas.csv", "Spring 2027", activeRooms);
+
+        assertThat(result.rows().get(0).course()).isEqualTo("'=SUM(1+1)");
+        assertThat(result.rows().get(0).section()).isEqualTo("'+admin");
+        assertThat(result.rows().get(0).faculty()).isEqualTo("'@attacker");
+    }
 }

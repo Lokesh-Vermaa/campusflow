@@ -20,14 +20,27 @@ class SecurityFilterTest extends BaseIntegrationTest {
     private MockMvc mockMvc;
 
     @Test
-    @DisplayName("Verify security headers on API responses")
+    @DisplayName("Verify security headers on API responses (CSP default-src 'none', no-referrer, nosniff, no-store)")
     void testSecurityHeaders() throws Exception {
         mockMvc.perform(get("/api/auth/csrf"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Security-Policy", "default-src 'self'"))
+                .andExpect(header().string("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'"))
                 .andExpect(header().string("X-Content-Type-Options", "nosniff"))
                 .andExpect(header().string("X-Frame-Options", "DENY"))
-                .andExpect(header().string("Referrer-Policy", "strict-origin-when-cross-origin"))
+                .andExpect(header().string("Referrer-Policy", "no-referrer"))
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")))
+                .andExpect(header().string(RequestIdFilter.REQUEST_ID_HEADER, startsWith("req-")));
+    }
+
+    @Test
+    @DisplayName("Verify security headers are preserved on error responses (e.g. 401)")
+    void testSecurityHeadersOnErrorResponse() throws Exception {
+        mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().string("Referrer-Policy", "no-referrer"))
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")))
                 .andExpect(header().string(RequestIdFilter.REQUEST_ID_HEADER, startsWith("req-")));
     }
 

@@ -1,0 +1,7 @@
+course,room,day,start,end,section,faculty,term
+,A-101,Monday,09:00,10:00,Sec A,Dr. Neha Verma,Spring 2027
+CS202,,Tuesday,10:00,11:00,Sec B,Prof. Sharma,Spring 2027
+CS301,Z-999,Wednesday,11:00,13:00,Lab 1,Dr. Amit Sengupta,Spring 2027
+CS302,A-101,Funday,14:00,15:30,Sec A,Dr. Priya Nair,Spring 2027
+CS401,A-102,Friday,16:00,14:00,Auditorium,Prof. Rajesh Patel,Spring 2027
+CS402,M-101,Monday,25:99,10:00,Sec C,Dr. Verma,Spring 2027

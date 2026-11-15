@@ -31,14 +31,23 @@ public class RoomAvailabilityController {
             @RequestParam @DateTimeFormat(pattern = "HH:mm") LocalTime endTime,
             @RequestParam(required = false) Integer minCapacity,
             @RequestParam(required = false) UUID blockId,
-            @RequestParam(required = false) String features
+            @RequestParam(required = false) String features,
+            org.springframework.security.core.Authentication auth
     ) {
         if (!endTime.isAfter(startTime)) {
             throw new BusinessRuleException("endTime must be strictly after startTime");
         }
 
+        String role = null;
+        if (auth != null) {
+            role = auth.getAuthorities().stream()
+                    .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                    .map(a -> a.replace("ROLE_", ""))
+                    .findFirst().orElse(null);
+        }
+
         AvailabilityResponse response = availabilityService.searchAvailability(
-                date, startTime, endTime, minCapacity, blockId, features
+                date, startTime, endTime, minCapacity, blockId, features, role
         );
         return ResponseEntity.ok(response);
     }

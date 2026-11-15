@@ -98,6 +98,26 @@ public class GlobalExceptionHandler {
                 .body(body);
     }
 
+    @ExceptionHandler({org.springframework.web.HttpMediaTypeNotSupportedException.class, UnsupportedMediaTypeException.class})
+    public ResponseEntity<ErrorResponse> handleUnsupportedMediaType(Exception ex) {
+        ErrorResponse body = new ErrorResponse(
+                "UNSUPPORTED_MEDIA_TYPE",
+                ex.getMessage() != null ? ex.getMessage() : "Media type not supported",
+                RequestIdFilter.getCurrentRequestId()
+        );
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(body);
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSize(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        ErrorResponse body = new ErrorResponse(
+                "FILE_SIZE_LIMIT_EXCEEDED",
+                "Uploaded file exceeds the maximum allowed limit of 10MB.",
+                RequestIdFilter.getCurrentRequestId()
+        );
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(body);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
         log.error("Unhandled exception [reqId: {}]: ", RequestIdFilter.getCurrentRequestId(), ex);

@@ -33,6 +33,9 @@ public class DemoProfileActiveTest {
     @Autowired(required = false)
     private DemoUserSeeder demoUserSeeder;
 
+    @Autowired(required = false)
+    private com.jklu.campusflow.common.security.GlobalRateLimitingFilter globalRateLimitingFilter;
+
     @Autowired
     private Flyway flyway;
 
@@ -46,6 +49,9 @@ public class DemoProfileActiveTest {
         flyway.migrate();
 
         // 1. Verify DemoUserSeeder bean is registered
+        if (globalRateLimitingFilter != null) {
+            globalRateLimitingFilter.resetAll();
+        }
         assertThat(demoUserSeeder).isNotNull();
         demoUserSeeder.run();
 
