@@ -133,7 +133,7 @@ Copy both `.env.example` templates:
    Open `backend/.env` and update:
    - `DB_USER=campusflow`
    - `DB_PASSWORD=<choose a password>` (must match the password chosen in Step 2)
-   - `DEMO_USER_PASSWORD=<choose a demo password>` (e.g. `change-me-demo-password`)
+   - `DEMO_USER_PASSWORD=Demo@2024` (or any password — must match `VITE_DEMO_PASSWORD` in frontend)
 
 2. **Frontend Configuration**:
    ```powershell
@@ -170,13 +170,21 @@ npm run dev
 Open **[http://localhost:5173](http://localhost:5173)** in your browser.
 
 ### Demo Account Credentials
-When `VITE_DEMO_MODE=true`, the login screen displays quick 1-click login pills:
+When `VITE_DEMO_MODE=true`, the login screen displays quick 1-click login pills for each role.
 
-| Role | Email | Password | Allowed Capabilities |
-| :--- | :--- | :--- | :--- |
-| **Student** | `student@demo.jklu.test` | Value in `VITE_DEMO_PASSWORD` | Classrooms, general zones, basic bookings |
-| **Staff** | `staff@demo.jklu.test` | Value in `VITE_DEMO_PASSWORD` | Amphitheatres, Labs, MDC Guest House, Visitor Parking |
-| **Admin** | `admin@demo.jklu.test` | Value in `VITE_DEMO_PASSWORD` | Approvals Queue, Timetable Sync, Master Data, Audit Log, Reports |
+> [!NOTE]
+> All three demo accounts share the same password. The login page shows clickable **Quick Login** pills — click one to fill the credentials automatically.
+
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| **Student** | `student@demo.jklu.test` | `Demo@2024` |
+| **Staff** | `staff@demo.jklu.test` | `Demo@2024` |
+| **Admin** | `admin@demo.jklu.test` | `Demo@2024` |
+
+**What each role can do:**
+- **Student**: Book classrooms and general zones; view own bookings; chat with AI agent.
+- **Staff**: Everything a student can do, plus amphitheatres, research labs, MDC Guest House suites, and visitor parking.
+- **Admin**: Everything staff can, plus the Approvals queue, Timetable CSV import, Master Data management, Audit Log, and Reports dashboard.
 
 ---
 

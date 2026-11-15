@@ -48,7 +48,7 @@ Run through these 6 checks 15 minutes before presenting to the jury:
 | STAFF | staff@demo.jklu.test | Dr. Neha Verma | Electronics & Communication |
 | ADMIN | admin@demo.jklu.test | Rajesh Patel | Estate & Campus Operations |
 
-Password for all demo users: set in `DEMO_USER_PASSWORD` env var (placeholder: `change-me-demo-password`)
+Password for all demo users: **`Demo@2024`** (all three accounts share this password)
 
 ## Demo Flow: Guest Lecture Booking
 
