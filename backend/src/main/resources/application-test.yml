@@ -16,8 +16,15 @@ spring:
     clean-on-validation-error: true
     validate-on-migrate: false
 
+app:
+  agent:
+    mode: scripted
+
 agent:
   executor:
     async: false
   rate-limit:
     per-minute: 1000  # Effectively disabled during tests
+
+LLM_API_KEY: ""
+LLM_PROVIDER: offline
