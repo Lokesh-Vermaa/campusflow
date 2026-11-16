@@ -138,7 +138,11 @@ public class SecurityConfig {
                 "X-CSRF-TOKEN",
                 "X-XSRF-TOKEN",
                 "X-Request-ID",
-                "X-Idempotency-Key"
+                "X-Idempotency-Key",
+                "Idempotency-Key",
+                "Authorization",
+                "Accept",
+                "Origin"
         ));
         configuration.setExposedHeaders(Arrays.asList(
                 "X-Request-ID",

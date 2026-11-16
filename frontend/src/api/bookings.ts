@@ -20,6 +20,7 @@ export const bookingsApi = {
       method: 'POST',
       headers: {
         'Idempotency-Key': key,
+        'X-Idempotency-Key': key,
       },
       body: JSON.stringify(data),
       schema: BookingSchema,
