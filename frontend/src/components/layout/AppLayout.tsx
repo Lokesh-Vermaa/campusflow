@@ -1,6 +1,8 @@
 import { useState, useCallback, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/features/auth/useAuth';
+import { adminApi } from '@/api/admin';
 import { SkipLink } from '@/components/ui/SkipLink';
 import { Sidebar, RecentChat } from '@/components/layout/Sidebar';
 import { MobileTopBar } from '@/components/layout/MobileTopBar';
@@ -50,6 +52,18 @@ export function AppLayout({ children }: AppLayoutProps) {
     },
   });
 
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole('ADMIN');
+
+  // Approvals count for admin sidebar badge
+  const { data: approvalsData } = useQuery({
+    queryKey: ['admin', 'approvals', 'sidebar-count'],
+    queryFn: () => adminApi.getApprovals({ page: 1, pageSize: 1 }),
+    enabled: isAdmin,
+    staleTime: 15_000,
+  });
+  const pendingApprovalsCount = approvalsData?.pagination?.totalItems ?? approvalsData?.total ?? 0;
+
   const handleRename = useCallback(
     (id: string, title: string) => renameMutation.mutate({ id, title }),
     [renameMutation],
@@ -70,6 +84,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         recentChats={recentChats}
         onRenameChat={handleRename}
         onDeleteChat={handleDelete}
+        pendingApprovalsCount={pendingApprovalsCount}
       />
 
       {/* Main Content Area */}

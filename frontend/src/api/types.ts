@@ -33,6 +33,29 @@ export const PaginationSchema = z.object({
 });
 export type Pagination = z.infer<typeof PaginationSchema>;
 
+export const normalizePaginated = (val: unknown) => {
+  if (typeof val !== 'object' || val === null) return val;
+  const obj = val as Record<string, unknown>;
+  const page = Number(obj.page ?? 1);
+  const pageSize = Number(obj.pageSize ?? 10);
+  const total = Number(obj.total ?? obj.totalItems ?? 0);
+  const totalPages = Number(obj.totalPages ?? Math.max(1, Math.ceil(total / (pageSize || 1))));
+
+  const pagination = (typeof obj.pagination === 'object' && obj.pagination !== null)
+    ? obj.pagination
+    : { page, pageSize, totalItems: total, totalPages };
+
+  return {
+    ...obj,
+    items: Array.isArray(obj.items) ? obj.items : [],
+    page,
+    pageSize,
+    total,
+    totalPages,
+    pagination,
+  };
+};
+
 // ==========================================
 // 2. Authentication & User Schemas
 // ==========================================
@@ -316,10 +339,17 @@ export const CreateBookingRequestSchema = z
   );
 export type CreateBookingRequest = z.infer<typeof CreateBookingRequestSchema>;
 
-export const PaginatedBookingsResponseSchema = z.object({
-  items: z.array(BookingSchema),
-  pagination: PaginationSchema,
-});
+export const PaginatedBookingsResponseSchema = z.preprocess(
+  normalizePaginated,
+  z.object({
+    items: z.array(BookingSchema),
+    pagination: PaginationSchema,
+    page: z.number().optional(),
+    pageSize: z.number().optional(),
+    total: z.number().optional(),
+    totalPages: z.number().optional(),
+  })
+);
 export type PaginatedBookingsResponse = z.infer<typeof PaginatedBookingsResponseSchema>;
 
 // ==========================================
@@ -357,10 +387,17 @@ export const AuditLogEntrySchema = z.object({
 });
 export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>;
 
-export const PaginatedAuditResponseSchema = z.object({
-  items: z.array(AuditLogEntrySchema),
-  pagination: PaginationSchema,
-});
+export const PaginatedAuditResponseSchema = z.preprocess(
+  normalizePaginated,
+  z.object({
+    items: z.array(AuditLogEntrySchema),
+    pagination: PaginationSchema,
+    page: z.number().optional(),
+    pageSize: z.number().optional(),
+    total: z.number().optional(),
+    totalPages: z.number().optional(),
+  })
+);
 export type PaginatedAuditResponse = z.infer<typeof PaginatedAuditResponseSchema>;
 
 // ==========================================
@@ -467,9 +504,26 @@ export const ConversationSchema = z.object({
 });
 export type Conversation = z.infer<typeof ConversationSchema>;
 
-export const PaginatedConversationsResponseSchema = z.object({
-  items: z.array(ConversationSchema),
-  pagination: PaginationSchema,
-});
+export const PaginatedConversationsResponseSchema = z.preprocess(
+  normalizePaginated,
+  z.object({
+    items: z.array(ConversationSchema),
+    pagination: PaginationSchema,
+    page: z.number().optional(),
+    pageSize: z.number().optional(),
+    total: z.number().optional(),
+    totalPages: z.number().optional(),
+  })
+);
 export type PaginatedConversationsResponse = z.infer<typeof PaginatedConversationsResponseSchema>;
+
+export const ConversationMessageDtoSchema = z.object({
+  id: z.string().uuid(),
+  sessionId: z.string().uuid(),
+  role: z.string(),
+  content: z.string(),
+  metadata: z.string().optional().nullable(),
+  createdAt: z.string(),
+});
+export type ConversationMessageDto = z.infer<typeof ConversationMessageDtoSchema>;
 

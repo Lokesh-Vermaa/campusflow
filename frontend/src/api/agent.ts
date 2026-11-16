@@ -18,10 +18,11 @@ export async function streamAgentChat(
   userQuery: string,
   callbacks: AgentStreamCallbacks,
   abortSignal?: AbortSignal,
+  conversationId?: string,
 ): Promise<void> {
   // 1. Try real backend SSE stream first
   try {
-    const success = await streamFromBackend(userQuery, callbacks, abortSignal);
+    const success = await streamFromBackend(userQuery, callbacks, abortSignal, conversationId);
     if (success) return;
   } catch {
     if (abortSignal?.aborted) {
@@ -42,6 +43,7 @@ async function streamFromBackend(
   userQuery: string,
   callbacks: AgentStreamCallbacks,
   abortSignal?: AbortSignal,
+  conversationId?: string,
 ): Promise<boolean> {
   const csrfToken = await getCsrfToken();
   const headers: Record<string, string> = {
@@ -52,11 +54,16 @@ async function streamFromBackend(
     headers['X-CSRF-TOKEN'] = csrfToken;
   }
 
+  const payload: Record<string, string> = { message: userQuery };
+  if (conversationId) {
+    payload.conversationId = conversationId;
+  }
+
   const res = await fetch(`${API_BASE}/agent/chat`, {
     method: 'POST',
     headers,
     credentials: 'include',
-    body: JSON.stringify({ message: userQuery }),
+    body: JSON.stringify(payload),
     signal: abortSignal,
   });
 

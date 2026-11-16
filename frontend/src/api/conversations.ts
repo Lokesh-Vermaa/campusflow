@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { Conversation, PaginatedConversationsResponse } from './types';
+import { Conversation, ConversationMessageDto, PaginatedConversationsResponse } from './types';
 
 export const conversationsApi = {
   /** List conversations for the current user (paginated) */
@@ -19,6 +19,11 @@ export const conversationsApi = {
   /** Get a single conversation by id */
   get: async (id: string): Promise<Conversation> => {
     return apiClient<Conversation>(`/conversations/${id}`, { method: 'GET' });
+  },
+
+  /** Get messages of a conversation */
+  getMessages: async (id: string): Promise<ConversationMessageDto[]> => {
+    return apiClient<ConversationMessageDto[]>(`/conversations/${id}/messages`, { method: 'GET' });
   },
 
   /** Rename a conversation */

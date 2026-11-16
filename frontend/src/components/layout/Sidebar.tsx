@@ -65,6 +65,7 @@ interface SidebarProps {
   recentChats?: RecentChat[];
   onRenameChat?: (id: string, newTitle: string) => void;
   onDeleteChat?: (id: string) => void;
+  pendingApprovalsCount?: number;
 }
 
 export function Sidebar({
@@ -75,6 +76,7 @@ export function Sidebar({
   recentChats = [],
   onRenameChat,
   onDeleteChat,
+  pendingApprovalsCount,
 }: SidebarProps) {
   const { user, logout, hasRole } = useAuth();
   const navigate = useNavigate();
@@ -345,7 +347,15 @@ export function Sidebar({
 
             <div className="space-y-0.5">
               {[
-                { label: 'Approvals', href: '/admin/approvals', icon: CheckSquare, badgeCount: 4 },
+                {
+                  label: 'Approvals',
+                  href: '/admin/approvals',
+                  icon: CheckSquare,
+                  badgeCount:
+                    pendingApprovalsCount !== undefined && pendingApprovalsCount > 0
+                      ? pendingApprovalsCount
+                      : undefined,
+                },
                 { label: 'Timetable Upload', href: '/admin/timetable', icon: UploadCloud },
                 { label: 'Master Data', href: '/admin/master-data', icon: Database },
                 { label: 'Audit Log', href: '/admin/audit', icon: ShieldAlert },

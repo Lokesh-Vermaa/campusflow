@@ -290,13 +290,39 @@ export function AgentChatPage() {
     }
   }, [conversationId]);
 
-  // Load conversation from sidebar if navigated to /c/:id
-  useQuery({
-    queryKey: ['conversation', conversationId],
-    queryFn: () => conversationsApi.get(conversationId!),
+  // Load conversation messages from sidebar if navigated to /c/:id
+  const { data: convMessages } = useQuery({
+    queryKey: ['conversation-messages', conversationId],
+    queryFn: () => conversationsApi.getMessages(conversationId!),
     enabled: Boolean(conversationId),
     retry: false,
   });
+
+  useEffect(() => {
+    if (convMessages && Array.isArray(convMessages) && convMessages.length > 0) {
+      const converted: AgentChatMessage[] = convMessages.map((m) => {
+        let meta: Record<string, unknown> = {};
+        if (m.metadata) {
+          try {
+            meta = JSON.parse(m.metadata);
+          } catch {
+            // ignore
+          }
+        }
+        return {
+          id: m.id,
+          sender: m.role?.toLowerCase() === 'user' ? 'user' : 'assistant',
+          timestamp: m.createdAt,
+          text: m.content,
+          plan: Array.isArray(meta.plan) ? (meta.plan as unknown as AgentChatMessage['plan']) : undefined,
+          toolCalls: Array.isArray(meta.toolCalls) ? (meta.toolCalls as unknown as AgentChatMessage['toolCalls']) : undefined,
+          proposal: meta.proposal ? (meta.proposal as unknown as AgentChatMessage['proposal']) : undefined,
+          conflict: meta.conflict ? (meta.conflict as unknown as AgentChatMessage['conflict']) : undefined,
+        };
+      });
+      setMessages(converted);
+    }
+  }, [convMessages]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -375,13 +401,20 @@ export function AgentChatPage() {
           });
           if (assistantMsg.toolCalls) setAllToolCalls(assistantMsg.toolCalls);
         },
-        onDone: () => setIsStreaming(false),
+        onDone: () => {
+          setIsStreaming(false);
+          if (convId) {
+            queryClient.invalidateQueries({ queryKey: ['conversation-messages', convId] });
+            queryClient.invalidateQueries({ queryKey: ['conversations'] });
+          }
+        },
         onError: (err) => {
           setIsStreaming(false);
           setStreamError(err.message);
         },
       },
       abortCtrl.signal,
+      convId,
     );
   };
 
