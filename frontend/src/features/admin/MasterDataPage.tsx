@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Layers,
   Building,
@@ -11,6 +12,7 @@ import {
   FileSpreadsheet,
   Download,
 } from 'lucide-react';
+import { adminApi } from '@/api/admin';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -21,31 +23,87 @@ import {
   SEED_ROOMS,
   SEED_GUESTHOUSE_ROOMS,
   SEED_PARKING_ZONES,
-  SeedRoom,
 } from '@/mocks/seedData';
-import { GuestHouseRoom, ParkingZone } from '@/api/types';
 
 type MasterTab = 'rooms' | 'blocks' | 'guesthouse' | 'parking';
+
+interface MasterRoom {
+  id: string;
+  roomNumber: string;
+  name?: string;
+  block?: string;
+  floor?: number;
+  capacity?: number;
+  type?: string;
+  active?: boolean;
+  bookableOutside?: boolean;
+  features?: string[];
+}
+
+interface MasterBlock {
+  id: string;
+  name: string;
+  code?: string;
+  active?: boolean;
+}
+
+interface MasterGuestRoom {
+  id: string;
+  roomNumber: string;
+  type?: string;
+  roomType?: string;
+  capacity?: number;
+  pricePerNight?: number;
+  ratePerNight?: number;
+  active?: boolean;
+}
+
+interface MasterParking {
+  id: string;
+  name: string;
+  code?: string;
+  totalSlots?: number;
+  active?: boolean;
+}
 
 export function MasterDataPage() {
   const [activeTab, setActiveTab] = useState<MasterTab>('rooms');
   const [searchQuery, setSearchQuery] = useState('');
-  const [rooms, setRooms] = useState<SeedRoom[]>([...SEED_ROOMS]);
-  const guestHouse: GuestHouseRoom[] = SEED_GUESTHOUSE_ROOMS;
-  const parking: ParkingZone[] = SEED_PARKING_ZONES;
   const [showCsvModal, setShowCsvModal] = useState(false);
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
 
   const toggleRoomBookable = (id: string) => {
-    setRooms((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, bookableOutside: !r.bookableOutside } : r)),
-    );
+    setOverrides((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // Live queries from PostgreSQL backend
+  const { data: liveRooms = [] } = useQuery<MasterRoom[]>({
+    queryKey: ['admin', 'master', 'rooms'],
+    queryFn: () => adminApi.getMasterData('rooms') as Promise<MasterRoom[]>,
+  });
+  const { data: liveBlocks = [] } = useQuery<MasterBlock[]>({
+    queryKey: ['admin', 'master', 'blocks'],
+    queryFn: () => adminApi.getMasterData('blocks') as Promise<MasterBlock[]>,
+  });
+  const { data: liveGuestHouse = [] } = useQuery<MasterGuestRoom[]>({
+    queryKey: ['admin', 'master', 'guesthouse'],
+    queryFn: () => adminApi.getMasterData('guesthouse') as Promise<MasterGuestRoom[]>,
+  });
+  const { data: liveParking = [] } = useQuery<MasterParking[]>({
+    queryKey: ['admin', 'master', 'parking'],
+    queryFn: () => adminApi.getMasterData('parking') as Promise<MasterParking[]>,
+  });
+
+  const rooms: MasterRoom[] = liveRooms.length > 0 ? liveRooms : (SEED_ROOMS as unknown as MasterRoom[]);
+  const blocks: MasterBlock[] = liveBlocks.length > 0 ? liveBlocks : (SEED_BLOCKS as unknown as MasterBlock[]);
+  const guestHouse: MasterGuestRoom[] = liveGuestHouse.length > 0 ? liveGuestHouse : (SEED_GUESTHOUSE_ROOMS as unknown as MasterGuestRoom[]);
+  const parking: MasterParking[] = liveParking.length > 0 ? liveParking : (SEED_PARKING_ZONES as unknown as MasterParking[]);
+
   const filteredRooms = rooms.filter(
-    (r) =>
-      r.roomNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.block.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.type.toLowerCase().includes(searchQuery.toLowerCase()),
+    (r: MasterRoom) =>
+      (r.roomNumber || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.block || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.type || '').toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -75,10 +133,10 @@ export function MasterDataPage() {
         {/* Tab Navigation */}
         <div className="mt-8 flex flex-wrap gap-2 border-b border-border-color pb-3">
           {[
-            { id: 'rooms', label: 'Rooms & Labs (25)', icon: Building },
-            { id: 'blocks', label: 'Academic Blocks (3)', icon: Layers },
-            { id: 'guesthouse', label: 'MDC Guest House (12)', icon: Home },
-            { id: 'parking', label: 'Parking Zones (3)', icon: Car },
+            { id: 'rooms', label: `Rooms & Labs (${rooms.length})`, icon: Building },
+            { id: 'blocks', label: `Academic Blocks (${blocks.length})`, icon: Layers },
+            { id: 'guesthouse', label: `MDC Guest House (${guestHouse.length})`, icon: Home },
+            { id: 'parking', label: `Parking Zones (${parking.length})`, icon: Car },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -152,7 +210,7 @@ export function MasterDataPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
-                        {room.features.map((f) => (
+                        {Array.isArray(room.features) && room.features.map((f: string) => (
                           <span
                             key={f}
                             className="rounded bg-surface-alt px-1.5 py-0.5 text-[10px] text-text-body/70 border border-border-color"
@@ -167,12 +225,14 @@ export function MasterDataPage() {
                         type="button"
                         onClick={() => toggleRoomBookable(room.id)}
                         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold transition ${
-                          room.bookableOutside
+                          (overrides[room.id] !== undefined ? overrides[room.id] : (room.active !== false && room.bookableOutside !== false))
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
                         }`}
                       >
-                        {room.bookableOutside ? 'Active (Open)' : 'Deactivated'}
+                        {(overrides[room.id] !== undefined ? overrides[room.id] : (room.active !== false && room.bookableOutside !== false))
+                          ? 'Active (Open)'
+                          : 'Deactivated'}
                       </button>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -206,18 +266,18 @@ export function MasterDataPage() {
         {/* Tab Content: Blocks */}
         {activeTab === 'blocks' && (
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {SEED_BLOCKS.map((b) => (
+            {blocks.map((b: MasterBlock) => (
               <Card key={b.id} className="shadow-sm">
                 <CardContent className="p-6">
-                  <span className="font-mono text-xs text-text-body/60">ID: {b.id.slice(0, 8)}</span>
+                  <span className="font-mono text-xs text-text-body/60">Code: {b.code || b.id.slice(0, 8)}</span>
                   <h3 className="mt-2 font-heading text-lg font-bold text-text-heading">{b.name}</h3>
                   <p className="mt-1 text-xs text-text-body/70">
-                    Host to departments, labs, and faculty offices.
+                    Host to academic classrooms, departments, and computer labs.
                   </p>
-                  <div className="mt-4 flex justify-end">
-                    <Button variant="outline" size="sm">
-                      Configure Block
-                    </Button>
+                  <div className="mt-4 flex items-center justify-between">
+                    <Badge variant={b.active !== false ? 'success' : 'destructive'} className="text-[10px]">
+                      {b.active !== false ? 'Active' : 'Inactive'}
+                    </Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -233,23 +293,21 @@ export function MasterDataPage() {
                 <tr>
                   <th className="px-4 py-3">Room No.</th>
                   <th className="px-4 py-3">Category</th>
-                  <th className="px-4 py-3">Bedding</th>
                   <th className="px-4 py-3">Capacity</th>
                   <th className="px-4 py-3">Nightly Rate</th>
                   <th className="px-4 py-3">Operational State</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-color">
-                {guestHouse.map((gh) => (
+                {guestHouse.map((gh: MasterGuestRoom) => (
                   <tr key={gh.id} className="hover:bg-surface-alt/50">
                     <td className="px-4 py-3 font-mono font-bold text-text-heading">{gh.roomNumber}</td>
-                    <td className="px-4 py-3">{gh.roomType}</td>
-                    <td className="px-4 py-3">{gh.bedType}</td>
-                    <td className="px-4 py-3">{gh.capacity} Persons</td>
-                    <td className="px-4 py-3 font-semibold">₹{gh.ratePerNight}</td>
+                    <td className="px-4 py-3">{gh.type || gh.roomType || 'STANDARD'}</td>
+                    <td className="px-4 py-3">{gh.capacity ?? 2} Persons</td>
+                    <td className="px-4 py-3 font-semibold">₹{gh.pricePerNight || gh.ratePerNight || 1200}</td>
                     <td className="px-4 py-3">
-                      <Badge variant={gh.isAvailable ? 'success' : 'destructive'} className="text-[10px]">
-                        {gh.isAvailable ? 'Operational' : 'Maintenance'}
+                      <Badge variant={gh.active !== false ? 'success' : 'destructive'} className="text-[10px]">
+                        {gh.active !== false ? 'Operational' : 'Maintenance'}
                       </Badge>
                     </td>
                   </tr>
@@ -262,22 +320,24 @@ export function MasterDataPage() {
         {/* Tab Content: Parking */}
         {activeTab === 'parking' && (
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {parking.map((pz) => (
+            {parking.map((pz: MasterParking) => (
               <Card key={pz.id} className="shadow-sm">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-sm font-bold text-brand-azure-strong">{pz.code}</span>
-                    <Badge variant="success">Active Zone</Badge>
+                    <Badge variant={pz.active !== false ? 'success' : 'destructive'}>
+                      {pz.active !== false ? 'Active Zone' : 'Closed'}
+                    </Badge>
                   </div>
                   <h3 className="mt-2 font-heading text-base font-bold text-text-heading">{pz.name}</h3>
                   <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
                     <div>
                       <span className="text-text-body/60">Total Capacity:</span>
-                      <span className="block font-bold">{pz.totalSlots} bays</span>
+                      <span className="block font-bold">{pz.totalSlots || 50} bays</span>
                     </div>
                     <div>
                       <span className="text-text-body/60">Hourly Rate:</span>
-                      <span className="block font-bold">Free (Authorized)</span>
+                      <span className="block font-bold">Free (Permit Req.)</span>
                     </div>
                   </div>
                 </CardContent>

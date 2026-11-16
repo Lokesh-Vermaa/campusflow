@@ -167,9 +167,9 @@ export function ReportsPage() {
               <div className="flex items-center justify-between border-b border-border-color pb-4">
                 <div>
                   <span className="font-semibold text-sm text-text-heading">MDC Guest House</span>
-                  <p className="text-xs text-text-body/60">Occupancy: {report?.guestHouseOccupancyPct ?? 75}%</p>
+                  <p className="text-xs text-text-body/60">Occupancy: {report?.guestHouseOccupancyPct ?? 0}%</p>
                 </div>
-                <div className="h-24 w-24">
+                <div className="relative h-24 w-24 flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -186,6 +186,11 @@ export function ReportsPage() {
                       </Pie>
                     </PieChart>
                   </ResponsiveContainer>
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="font-heading font-bold text-xs text-text-heading">
+                      {report?.guestHouseOccupancyPct ?? 0}%
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -195,7 +200,7 @@ export function ReportsPage() {
                   <span className="font-semibold text-sm text-text-heading">Visitor Parking</span>
                   <p className="text-xs text-text-body/60">Peak Bays: {report?.parkingPeakOccupancyPct ?? 88}%</p>
                 </div>
-                <div className="h-24 w-24">
+                <div className="relative h-24 w-24 flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -212,6 +217,11 @@ export function ReportsPage() {
                       </Pie>
                     </PieChart>
                   </ResponsiveContainer>
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="font-heading font-bold text-xs text-text-heading">
+                      {report?.parkingPeakOccupancyPct ?? 88}%
+                    </span>
+                  </div>
                 </div>
               </div>
             </CardContent>

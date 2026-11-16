@@ -6,6 +6,8 @@ import com.jklu.campusflow.agent.model.ConversationMessage;
 import com.jklu.campusflow.agent.repository.ConversationMessageRepository;
 import com.jklu.campusflow.agent.service.PolicySearchService;
 import com.jklu.campusflow.audit.service.AuditService;
+import com.jklu.campusflow.timetable.model.TimetableSlot;
+import com.jklu.campusflow.timetable.repository.TimetableSlotRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +34,7 @@ public class LlmAgentPlanner {
 
     private final ScriptedPlanner scriptedPlanner;
     private final PolicySearchService policySearchService;
+    private final TimetableSlotRepository timetableSlotRepository;
     private final AuditService auditService;
     private final ConversationMessageRepository conversationMessageRepository;
     private final ObjectMapper objectMapper;
@@ -46,6 +49,7 @@ public class LlmAgentPlanner {
     public LlmAgentPlanner(
             ScriptedPlanner scriptedPlanner,
             PolicySearchService policySearchService,
+            TimetableSlotRepository timetableSlotRepository,
             AuditService auditService,
             ConversationMessageRepository conversationMessageRepository,
             ObjectMapper objectMapper,
@@ -57,6 +61,7 @@ public class LlmAgentPlanner {
     ) {
         this.scriptedPlanner = scriptedPlanner;
         this.policySearchService = policySearchService;
+        this.timetableSlotRepository = timetableSlotRepository;
         this.auditService = auditService;
         this.conversationMessageRepository = conversationMessageRepository;
         this.objectMapper = objectMapper;
@@ -120,7 +125,7 @@ public class LlmAgentPlanner {
             return;
         }
 
-        // Informational / Policy Query / Conversational Request
+        // Informational / Policy Query / Timetable / Conversational Request
         List<Map<String, Object>> steps = List.of(
                 Map.of("id", 1, "title", "Analyze policy requirements and scheduling context", "status", "completed"),
                 Map.of("id", 2, "title", "Generate grounded guidance via Gemini LLM", "status", "running")
@@ -130,31 +135,35 @@ public class LlmAgentPlanner {
         // Retrieve relevant policy snippets
         long toolStart = System.currentTimeMillis();
         String policyExcerpt = policySearchService.search(sanitizedMessage);
+        String timetableExcerpt = searchTimetableInfo(sanitizedMessage);
         long toolDuration = System.currentTimeMillis() - toolStart;
 
         sendEvent(emitter, "tool_call", toJson(Map.of(
                 "id", UUID.randomUUID().toString(),
-                "tool", "search_campus_policy",
+                "tool", "search_campus_policy_and_timetable",
                 "args", Map.of("query", sanitizedMessage),
                 "status", "success",
                 "durationMs", toolDuration,
-                "resultSummary", "Retrieved relevant JKLU policy clauses."
+                "resultSummary", "Retrieved verified JKLU policy clauses and published timetable records."
         )));
 
         // Call Gemini
         String prompt = "You are the JKLU CampusFlow AI Assistant, an intelligent multi-resource scheduling assistant for JK Lakshmipat University.\n"
-                + "Current User Role: " + userRole + "\n"
-                + "Campus Policy Guidelines:\n"
+                + "Current User Role: " + userRole + "\n\n"
+                + "Verified Campus Policy Guidelines:\n"
                 + policyExcerpt + "\n\n"
+                + "Published Semester Timetable Records:\n"
+                + timetableExcerpt + "\n\n"
                 + "User Query: " + sanitizedMessage + "\n\n"
-                + "Instructions:\n"
-                + "1. Respond politely, clearly, and concisely grounded in the campus policies.\n"
-                + "2. If the user is asking about booking an event, clearly explain what details are required (date, start and end times, estimated attendees, room/venue type, and whether guest house stay or parking is needed).\n"
-                + "3. Adhere strictly to campus governance (e.g. regular classes take strict precedence, students require Admin approval for reservations, MDC Guest House check-in is 12:00 PM).";
+                + "Strict Instructions:\n"
+                + "1. Respond politely, clearly, and concisely grounded in the campus policies and timetable records provided above.\n"
+                + "2. If the user asks about course timings, timetable slots, faculty, or room schedules: use ONLY the published timetable records provided above. If the course or slot is not in the timetable records, explicitly state: 'I do not have record of that course/faculty/slot in the current published semester timetable.' Then tell the user what classes are currently published or offer to check open venue availability. NEVER fabricate or guess timetable slots.\n"
+                + "3. If the user is asking about booking an event, clearly explain what details are required (date, start and end times, estimated attendees, room/venue type, and whether guest house stay or parking is needed).\n"
+                + "4. Adhere strictly to campus governance (e.g. regular classes take strict precedence, students require Admin approval for reservations, MDC Guest House check-in is 12:00 PM).";
 
         String geminiResponse = callGemini(prompt);
 
-        sendEvent(emitter, "thinking", toJson(Map.of("content", "Gemini (" + modelName + ") synthesized response based on verified JKLU policies.")));
+        sendEvent(emitter, "thinking", toJson(Map.of("content", "Gemini (" + modelName + ") synthesized response based on verified JKLU policies and schedules.")));
         sendEvent(emitter, "done", toJson(Map.of("content", geminiResponse)));
 
         // Persist to conversation history
@@ -184,6 +193,52 @@ public class LlmAgentPlanner {
         );
 
         emitter.complete();
+    }
+
+    private String searchTimetableInfo(String message) {
+        if (message == null || message.isBlank()) return "No timetable records queried.";
+        String[] words = message.replaceAll("[^a-zA-Z0-9\\s]", " ").split("\\s+");
+        List<TimetableSlot> allMatches = new ArrayList<>();
+        Set<UUID> seenIds = new HashSet<>();
+
+        for (String w : words) {
+            if (w.length() >= 2 && !w.equalsIgnoreCase("the") && !w.equalsIgnoreCase("for") && !w.equalsIgnoreCase("and")
+                    && !w.equalsIgnoreCase("what") && !w.equalsIgnoreCase("when") && !w.equalsIgnoreCase("where")
+                    && !w.equalsIgnoreCase("room") && !w.equalsIgnoreCase("hall") && !w.equalsIgnoreCase("can")) {
+                List<TimetableSlot> found = timetableSlotRepository.searchActiveSlots(w);
+                for (TimetableSlot ts : found) {
+                    if (seenIds.add(ts.getId())) {
+                        allMatches.add(ts);
+                        if (allMatches.size() >= 12) break;
+                    }
+                }
+            }
+            if (allMatches.size() >= 12) break;
+        }
+
+        if (allMatches.isEmpty()) {
+            return "No matching timetable slots found in current published schedule.";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        String[] days = {"", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+        for (TimetableSlot ts : allMatches) {
+            String dayName = (ts.getDayOfWeek() >= 1 && ts.getDayOfWeek() <= 7) ? days[ts.getDayOfWeek()] : "Day " + ts.getDayOfWeek();
+            String startStr = String.format("%02d:%02d", ts.getStartMinute() / 60, ts.getStartMinute() % 60);
+            String endStr = String.format("%02d:%02d", ts.getEndMinute() / 60, ts.getEndMinute() % 60);
+            sb.append("- Course: ").append(ts.getCourseCode())
+              .append(", Room: ").append(ts.getRoom() != null ? ts.getRoom().getRoomNumber() : "Unknown")
+              .append(", Day: ").append(dayName)
+              .append(", Time: ").append(startStr).append("-").append(endStr);
+            if (ts.getFaculty() != null && !ts.getFaculty().isBlank()) {
+                sb.append(", Faculty: ").append(ts.getFaculty());
+            }
+            if (ts.getSection() != null && !ts.getSection().isBlank()) {
+                sb.append(", Section: ").append(ts.getSection());
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
     }
 
     private String callGemini(String prompt) throws Exception {

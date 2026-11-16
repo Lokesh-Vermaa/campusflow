@@ -3,6 +3,8 @@ package com.jklu.campusflow.audit.service;
 import com.jklu.campusflow.audit.dto.AuditLogResponse;
 import com.jklu.campusflow.audit.model.AuditLog;
 import com.jklu.campusflow.audit.repository.AuditLogRepository;
+import com.jklu.campusflow.auth.User;
+import com.jklu.campusflow.auth.UserRepository;
 import com.jklu.campusflow.common.dto.PaginatedResponse;
 import com.jklu.campusflow.timetable.parser.TimetableParser;
 import org.springframework.data.domain.Page;
@@ -14,16 +16,20 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.StringWriter;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
 public class AuditService {
 
     private final AuditLogRepository auditLogRepository;
+    private final UserRepository userRepository;
 
-    public AuditService(AuditLogRepository auditLogRepository) {
+    public AuditService(AuditLogRepository auditLogRepository, UserRepository userRepository) {
         this.auditLogRepository = auditLogRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -33,7 +39,7 @@ public class AuditService {
     }
 
     public PaginatedResponse<AuditLogResponse> searchAuditLogs(
-            UUID actor,
+            String actor,
             String eventType,
             OffsetDateTime startDate,
             OffsetDateTime endDate,
@@ -44,17 +50,22 @@ public class AuditService {
         int safePageSize = Math.min(100, Math.max(1, pageSize));
         Pageable pageable = PageRequest.of(safePage, safePageSize);
 
-        Page<AuditLog> logPage = auditLogRepository.findWithFilters(actor, eventType, startDate, endDate, pageable);
+        UUID actorId = resolveActorId(actor);
+        Page<AuditLog> logPage = auditLogRepository.findWithFilters(actorId, eventType, startDate, endDate, pageable);
+
+        Map<UUID, User> userMap = userRepository.findAll().stream()
+                .collect(Collectors.toMap(User::getId, u -> u, (a, b) -> a));
 
         List<AuditLogResponse> items = logPage.getContent().stream()
-                .map(this::toResponse)
+                .map(a -> toResponse(a, userMap))
                 .toList();
 
         return new PaginatedResponse<>(items, page, safePageSize, logPage.getTotalElements(), logPage.getTotalPages());
     }
 
-    public String exportToCsv(UUID actor, String eventType, OffsetDateTime startDate, OffsetDateTime endDate) {
-        List<AuditLog> entries = auditLogRepository.findForExport(actor, eventType, startDate, endDate);
+    public String exportToCsv(String actor, String eventType, OffsetDateTime startDate, OffsetDateTime endDate) {
+        UUID actorId = resolveActorId(actor);
+        List<AuditLog> entries = auditLogRepository.findForExport(actorId, eventType, startDate, endDate);
 
         StringWriter sw = new StringWriter();
         sw.append("id,user_id,action,entity_type,entity_id,ip_address,created_at\n");
@@ -72,6 +83,20 @@ public class AuditService {
         return sw.toString();
     }
 
+    private UUID resolveActorId(String actor) {
+        if (actor == null || actor.isBlank()) return null;
+        try {
+            return UUID.fromString(actor.trim());
+        } catch (IllegalArgumentException e) {
+            String lower = actor.trim().toLowerCase();
+            return userRepository.findAll().stream()
+                    .filter(u -> u.getFullName().toLowerCase().contains(lower) || u.getEmail().toLowerCase().contains(lower))
+                    .map(User::getId)
+                    .findFirst()
+                    .orElse(UUID.randomUUID());
+        }
+    }
+
     private String escapeCsv(String val) {
         if (val == null) return "";
         // Neutralize CSV formula injection (=, +, -, @)
@@ -82,10 +107,18 @@ public class AuditService {
         return safe;
     }
 
-    private AuditLogResponse toResponse(AuditLog a) {
+    private AuditLogResponse toResponse(AuditLog a, Map<UUID, User> userMap) {
+        User u = a.getUserId() != null ? userMap.get(a.getUserId()) : null;
+        String actorName = u != null ? u.getFullName() : (a.getUserId() != null ? "User " + a.getUserId().toString().substring(0, 8) : "System");
+        String actorRole = u != null ? u.getRole() : "SYSTEM";
+        String eventType = a.getAction() != null ? a.getAction() : "DATA_CHANGE";
+
         return new AuditLogResponse(
                 a.getId(),
                 a.getUserId(),
+                actorName,
+                actorRole,
+                eventType,
                 a.getAction(),
                 a.getEntityType(),
                 a.getEntityId(),

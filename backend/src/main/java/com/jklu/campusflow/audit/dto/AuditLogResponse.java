@@ -6,6 +6,9 @@ import java.util.UUID;
 public record AuditLogResponse(
         UUID id,
         UUID userId,
+        String actor,
+        String actorRole,
+        String eventType,
         String action,
         String entityType,
         String entityId,

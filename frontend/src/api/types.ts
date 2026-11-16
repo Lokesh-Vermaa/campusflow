@@ -375,16 +375,46 @@ export const AuditEventTypeEnum = z.enum([
 ]);
 export type AuditEventType = z.infer<typeof AuditEventTypeEnum>;
 
-export const AuditLogEntrySchema = z.object({
+export const AuditLogEntrySchema = z.preprocess((val: unknown) => {
+  if (typeof val !== 'object' || val === null) return val;
+  const obj = val as Record<string, unknown>;
+  const timestamp = String(obj.timestamp ?? obj.createdAt ?? new Date().toISOString());
+  const actor = String(obj.actor ?? (obj.userId ? `User ${String(obj.userId).substring(0, 8)}` : 'System'));
+  const actorRole = String(obj.actorRole ?? 'SYSTEM');
+  const action = String(obj.action ?? obj.eventType ?? 'AUDIT');
+  const eventType = String(obj.eventType ?? obj.action ?? 'DATA_CHANGE');
+
+  let details: Record<string, unknown> = {};
+  if (typeof obj.details === 'object' && obj.details !== null) {
+    details = obj.details as Record<string, unknown>;
+  } else {
+    details = {
+      entityType: obj.entityType,
+      entityId: obj.entityId,
+      oldState: obj.oldState,
+      newState: obj.newState,
+    };
+  }
+
+  return {
+    ...obj,
+    timestamp,
+    actor,
+    actorRole,
+    action,
+    eventType,
+    details,
+  };
+}, z.object({
   id: z.string().uuid(),
   timestamp: z.string(),
   actor: z.string(),
-  actorRole: RoleEnum,
-  eventType: AuditEventTypeEnum,
+  actorRole: z.string(),
+  eventType: z.string(),
   action: z.string(),
-  details: z.record(z.unknown()),
-  ipAddress: z.string().optional(),
-});
+  details: z.record(z.unknown()).optional(),
+  ipAddress: z.string().optional().nullable(),
+}));
 export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>;
 
 export const PaginatedAuditResponseSchema = z.preprocess(

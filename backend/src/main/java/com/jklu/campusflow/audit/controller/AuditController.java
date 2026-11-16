@@ -26,7 +26,7 @@ public class AuditController {
 
     @GetMapping
     public ResponseEntity<PaginatedResponse<AuditLogResponse>> searchAuditLogs(
-            @RequestParam(required = false) UUID actor,
+            @RequestParam(required = false) String actor,
             @RequestParam(required = false) String eventType,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endDate,
@@ -41,7 +41,7 @@ public class AuditController {
 
     @GetMapping(value = "/export", produces = "text/csv")
     public ResponseEntity<String> exportAuditCsv(
-            @RequestParam(required = false) UUID actor,
+            @RequestParam(required = false) String actor,
             @RequestParam(required = false) String eventType,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endDate
