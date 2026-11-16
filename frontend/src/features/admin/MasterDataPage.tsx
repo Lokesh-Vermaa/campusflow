@@ -18,12 +18,6 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import {
-  SEED_BLOCKS,
-  SEED_ROOMS,
-  SEED_GUESTHOUSE_ROOMS,
-  SEED_PARKING_ZONES,
-} from '@/mocks/seedData';
 
 type MasterTab = 'rooms' | 'blocks' | 'guesthouse' | 'parking';
 
@@ -94,10 +88,10 @@ export function MasterDataPage() {
     queryFn: () => adminApi.getMasterData('parking') as Promise<MasterParking[]>,
   });
 
-  const rooms: MasterRoom[] = liveRooms.length > 0 ? liveRooms : (SEED_ROOMS as unknown as MasterRoom[]);
-  const blocks: MasterBlock[] = liveBlocks.length > 0 ? liveBlocks : (SEED_BLOCKS as unknown as MasterBlock[]);
-  const guestHouse: MasterGuestRoom[] = liveGuestHouse.length > 0 ? liveGuestHouse : (SEED_GUESTHOUSE_ROOMS as unknown as MasterGuestRoom[]);
-  const parking: MasterParking[] = liveParking.length > 0 ? liveParking : (SEED_PARKING_ZONES as unknown as MasterParking[]);
+  const rooms: MasterRoom[] = liveRooms;
+  const blocks: MasterBlock[] = liveBlocks;
+  const guestHouse: MasterGuestRoom[] = liveGuestHouse;
+  const parking: MasterParking[] = liveParking;
 
   const filteredRooms = rooms.filter(
     (r: MasterRoom) =>

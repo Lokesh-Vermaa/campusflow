@@ -23,6 +23,18 @@ public class RoomAvailabilityController {
         this.availabilityService = availabilityService;
     }
 
+    @GetMapping
+    @PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'ADMIN')")
+    public ResponseEntity<?> getAllRooms() {
+        return ResponseEntity.ok(availabilityService.listAllActiveRooms());
+    }
+
+    @GetMapping("/blocks")
+    @PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'ADMIN')")
+    public ResponseEntity<?> getActiveBlocks() {
+        return ResponseEntity.ok(availabilityService.listAllActiveBlocks());
+    }
+
     @GetMapping("/availability")
     @PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'ADMIN')")
     public ResponseEntity<AvailabilityResponse> searchAvailability(

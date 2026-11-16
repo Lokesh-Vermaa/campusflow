@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { bookingsApi } from '@/api/bookings';
 import { roomsApi } from '@/api/rooms';
+import { venuesApi } from '@/api/venues';
 import { guestHouseApi } from '@/api/guesthouse';
 import { parkingApi } from '@/api/parking';
 import { CreateBookingRequest, Booking } from '@/api/types';
@@ -22,7 +23,6 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { SEED_ROOMS, SEED_VENUES } from '@/mocks/seedData';
 
 export function BookingWizardPage() {
   const location = useLocation();
@@ -49,8 +49,19 @@ export function BookingWizardPage() {
   // Primary Resource
   const [resourceType, setResourceType] = useState<'ROOM' | 'VENUE'>('ROOM');
   const [selectedResourceId, setSelectedResourceId] = useState<string>(
-    prefill?.resourceId || SEED_ROOMS[0].id,
+    prefill?.resourceId || '',
   );
+
+  // Fetch real rooms and venues from API
+  const { data: allRooms = [] } = useQuery({
+    queryKey: ['rooms', 'all'],
+    queryFn: () => roomsApi.getRooms(),
+  });
+
+  const { data: allVenues = [] } = useQuery({
+    queryKey: ['venues', 'all'],
+    queryFn: () => venuesApi.getAll(),
+  });
 
   // Optional Guest House
   const [includeGuestHouse, setIncludeGuestHouse] = useState(false);
@@ -64,8 +75,9 @@ export function BookingWizardPage() {
   const [visitorName, setVisitorName] = useState('Dr. R. K. Sharma');
   const [vehicleNumber, setVehicleNumber] = useState('RJ-14-CB-9021');
 
-  // Completed booking state
+  // Completed booking state & error feedback
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Check room availability inline for conflict detection
   const { data: availability } = useQuery({
@@ -89,6 +101,16 @@ export function BookingWizardPage() {
   });
 
   useEffect(() => {
+    if (!selectedResourceId) {
+      if (resourceType === 'ROOM' && allRooms.length > 0) {
+        setSelectedResourceId(allRooms[0].id);
+      } else if (resourceType === 'VENUE' && allVenues.length > 0) {
+        setSelectedResourceId(allVenues[0].id);
+      }
+    }
+  }, [allRooms, allVenues, resourceType, selectedResourceId]);
+
+  useEffect(() => {
     if (guestHouseRooms.length > 0 && !selectedGuestHouseRoomId) {
       setSelectedGuestHouseRoomId(guestHouseRooms[0].id);
     }
@@ -108,24 +130,37 @@ export function BookingWizardPage() {
     onSuccess: (data) => {
       setCreatedBooking(data);
     },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : 'Failed to submit booking for approval.';
+      setSubmitError(msg);
+    },
   });
 
   const handleSubmitBooking = () => {
+    setSubmitError(null);
+    const chosenId = selectedResourceId || (resourceType === 'ROOM' ? allRooms[0]?.id : allVenues[0]?.id);
+    if (!chosenId) {
+      setSubmitError('Please select a valid venue before submitting.');
+      return;
+    }
+
     const payload: CreateBookingRequest = {
       title,
       description,
       resourceType: includeGuestHouse || includeParking ? 'MULTI_RESOURCE' : resourceType,
-      resourceId: selectedResourceId,
+      resourceId: chosenId,
       bookingDate,
       startTime,
       endTime,
-      expectedAttendees,
-      guestHouseRoomId: includeGuestHouse ? selectedGuestHouseRoomId : null,
-      guestHouseCheckIn: includeGuestHouse ? guestHouseCheckIn : null,
-      guestHouseCheckOut: includeGuestHouse ? guestHouseCheckOut : null,
-      parkingZoneId: includeParking ? selectedParkingZoneId : null,
-      visitorName: includeParking ? visitorName : null,
-      vehicleNumber: includeParking ? vehicleNumber : null,
+      expectedAttendees: Number(expectedAttendees),
+      guestHouseRoomId: includeGuestHouse && selectedGuestHouseRoomId ? selectedGuestHouseRoomId : undefined,
+      guestHouseCheckIn: includeGuestHouse ? guestHouseCheckIn : undefined,
+      guestHouseCheckOut: includeGuestHouse ? guestHouseCheckOut : undefined,
+      parkingRequests: includeParking && selectedParkingZoneId ? [{
+        zoneId: selectedParkingZoneId,
+        visitorName: visitorName || 'Campus Visitor',
+        vehicleNumber: vehicleNumber || 'N/A',
+      }] : undefined,
     };
 
     bookingMutation.mutate(payload);
@@ -316,7 +351,7 @@ export function BookingWizardPage() {
                   size="sm"
                   onClick={() => {
                     setResourceType('ROOM');
-                    setSelectedResourceId(SEED_ROOMS[0].id);
+                    if (allRooms.length > 0) setSelectedResourceId(allRooms[0].id);
                   }}
                 >
                   Academic Classrooms
@@ -327,7 +362,7 @@ export function BookingWizardPage() {
                   size="sm"
                   onClick={() => {
                     setResourceType('VENUE');
-                    setSelectedResourceId(SEED_VENUES[0].id);
+                    if (allVenues.length > 0) setSelectedResourceId(allVenues[0].id);
                   }}
                 >
                   Amphitheatres & Labs
@@ -343,12 +378,12 @@ export function BookingWizardPage() {
                   className="mt-1.5 flex h-10 w-full rounded-md border border-border-color bg-surface px-3 py-2 text-sm text-text-body shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-azure-strong"
                 >
                   {resourceType === 'ROOM'
-                    ? SEED_ROOMS.map((r) => (
+                    ? allRooms.map((r) => (
                         <option key={r.id} value={r.id}>
                           Room {r.roomNumber} ({r.block}) — {r.capacity} seats
                         </option>
                       ))
-                    : SEED_VENUES.map((v) => (
+                    : allVenues.map((v) => (
                         <option key={v.id} value={v.id} disabled={!v.isEligible}>
                           {v.name} ({v.type}) — {v.capacity} seats {!v.isEligible ? '[Restricted]' : ''}
                         </option>
@@ -599,7 +634,15 @@ export function BookingWizardPage() {
                 <div className="flex items-center justify-between rounded-md border border-border-color bg-surface-alt p-3 text-xs">
                   <span className="flex items-center gap-2 font-semibold">
                     <Building className="h-4 w-4 text-brand-azure-strong" aria-hidden="true" />
-                    Primary Venue: {resourceType === 'ROOM' ? 'Academic Classroom' : 'Amphitheatre / Lab'}
+                    Primary Venue: {(() => {
+                      if (resourceType === 'ROOM') {
+                        const r = allRooms.find((x) => x.id === selectedResourceId);
+                        return r ? `Room ${r.roomNumber} (${r.block})` : 'Academic Classroom';
+                      } else {
+                        const v = allVenues.find((x) => x.id === selectedResourceId);
+                        return v ? `${v.name} (${v.type})` : 'Amphitheatre / Lab';
+                      }
+                    })()}
                   </span>
                   <Badge variant="success">Confirmed Available</Badge>
                 </div>
@@ -629,6 +672,12 @@ export function BookingWizardPage() {
                 <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>Every state-changing campus booking requires administrative approval. Your submission will appear in the Admin Approval Queue immediately.</span>
               </div>
+
+              {submitError && (
+                <div className="rounded-md border border-red-300 bg-red-50 p-3 text-xs font-semibold text-red-700">
+                  {submitError}
+                </div>
+              )}
 
               <div className="flex justify-between pt-4">
                 <Button type="button" onClick={() => setCurrentStep(4)} variant="outline">

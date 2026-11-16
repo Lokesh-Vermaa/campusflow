@@ -2,6 +2,7 @@ import { apiClient } from './client';
 import {
   AvailabilityResponse,
   AvailabilityResponseSchema,
+  AvailableRoom,
   RoomScheduleResponse,
   RoomScheduleResponseSchema,
 } from './types';
@@ -38,5 +39,18 @@ export const roomsApi = {
       schema: RoomScheduleResponseSchema,
     });
   },
+
+  getRooms: async (): Promise<AvailableRoom[]> => {
+    return apiClient<AvailableRoom[]>('/rooms', {
+      method: 'GET',
+    });
+  },
+
+  getBlocks: async (): Promise<{ id: string; name: string; code: string; active: boolean }[]> => {
+    return apiClient<{ id: string; name: string; code: string; active: boolean }[]>('/rooms/blocks', {
+      method: 'GET',
+    });
+  },
 };
+
 

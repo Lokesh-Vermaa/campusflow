@@ -17,6 +17,8 @@ import java.io.StringWriter;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -26,10 +28,18 @@ public class AuditService {
 
     private final AuditLogRepository auditLogRepository;
     private final UserRepository userRepository;
+    private final Map<UUID, User> userCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     public AuditService(AuditLogRepository auditLogRepository, UserRepository userRepository) {
         this.auditLogRepository = auditLogRepository;
         this.userRepository = userRepository;
+    }
+
+    @jakarta.annotation.PostConstruct
+    public void initUserCache() {
+        try {
+            userRepository.findAll().forEach(u -> userCache.put(u.getId(), u));
+        } catch (Exception ignored) {}
     }
 
     @Transactional
@@ -53,11 +63,18 @@ public class AuditService {
         UUID actorId = resolveActorId(actor);
         Page<AuditLog> logPage = auditLogRepository.findWithFilters(actorId, eventType, startDate, endDate, pageable);
 
-        Map<UUID, User> userMap = userRepository.findAll().stream()
-                .collect(Collectors.toMap(User::getId, u -> u, (a, b) -> a));
+        Set<UUID> missingUserIds = logPage.getContent().stream()
+                .map(AuditLog::getUserId)
+                .filter(Objects::nonNull)
+                .filter(id -> !userCache.containsKey(id))
+                .collect(Collectors.toSet());
+
+        if (!missingUserIds.isEmpty()) {
+            userRepository.findAllById(missingUserIds).forEach(u -> userCache.put(u.getId(), u));
+        }
 
         List<AuditLogResponse> items = logPage.getContent().stream()
-                .map(a -> toResponse(a, userMap))
+                .map(a -> toResponse(a, userCache))
                 .toList();
 
         return new PaginatedResponse<>(items, page, safePageSize, logPage.getTotalElements(), logPage.getTotalPages());

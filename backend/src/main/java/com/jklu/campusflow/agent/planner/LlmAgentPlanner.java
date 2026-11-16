@@ -152,14 +152,18 @@ public class LlmAgentPlanner {
                 + "Current User Role: " + userRole + "\n\n"
                 + "Verified Campus Policy Guidelines:\n"
                 + policyExcerpt + "\n\n"
-                + "Published Semester Timetable Records:\n"
+                + "Published Semester Timetable Records & Free Slot Analysis:\n"
                 + timetableExcerpt + "\n\n"
                 + "User Query: " + sanitizedMessage + "\n\n"
                 + "Strict Instructions:\n"
-                + "1. Respond politely, clearly, and concisely grounded in the campus policies and timetable records provided above.\n"
-                + "2. If the user asks about course timings, timetable slots, faculty, or room schedules: use ONLY the published timetable records provided above. If the course or slot is not in the timetable records, explicitly state: 'I do not have record of that course/faculty/slot in the current published semester timetable.' Then tell the user what classes are currently published or offer to check open venue availability. NEVER fabricate or guess timetable slots.\n"
-                + "3. If the user is asking about booking an event, clearly explain what details are required (date, start and end times, estimated attendees, room/venue type, and whether guest house stay or parking is needed).\n"
-                + "4. Adhere strictly to campus governance (e.g. regular classes take strict precedence, students require Admin approval for reservations, MDC Guest House check-in is 12:00 PM).";
+                + "1. Respond politely, clearly, and concisely grounded strictly in the campus policies and timetable records provided above.\n"
+                + "2. If the user asks for free time slots, breaks, or availability for a section or student on any day:\n"
+                + "   - Present the scheduled classes first.\n"
+                + "   - Highlight the primary free time windows (e.g., for Section C on Monday: 11:50 AM to 02:00 PM lunch & free window, and after 04:50 PM).\n"
+                + "   - If both 3rd Semester and 1st Semester schedules exist for this section, clearly display both so the student has complete visibility.\n"
+                + "3. If the user asks about course timings, faculty, or room schedules: use ONLY the published timetable records provided above. If the course or slot is not in the timetable records, explicitly state: 'I do not have record of that course/faculty/slot in the current published semester timetable.' NEVER fabricate or guess timetable slots.\n"
+                + "4. If the user is asking about booking an event, clearly explain what details are required (date, start and end times, estimated attendees, room/venue type, and whether guest house stay or parking is needed).\n"
+                + "5. Adhere strictly to campus governance (regular classes take strict precedence, students require Admin approval for reservations).";
 
         String geminiResponse = callGemini(prompt);
 
@@ -197,33 +201,65 @@ public class LlmAgentPlanner {
 
     private String searchTimetableInfo(String message) {
         if (message == null || message.isBlank()) return "No timetable records queried.";
+
+        // Detect Day of week
+        Integer targetDayOfWeek = null;
+        String lowerMsg = message.toLowerCase();
+        if (lowerMsg.contains("monday") || lowerMsg.matches(".*\\bmon\\b.*")) targetDayOfWeek = 1;
+        else if (lowerMsg.contains("tuesday") || lowerMsg.matches(".*\\btue\\b.*")) targetDayOfWeek = 2;
+        else if (lowerMsg.contains("wednesday") || lowerMsg.matches(".*\\bwed\\b.*")) targetDayOfWeek = 3;
+        else if (lowerMsg.contains("thursday") || lowerMsg.matches(".*\\bthu\\b.*")) targetDayOfWeek = 4;
+        else if (lowerMsg.contains("friday") || lowerMsg.matches(".*\\bfri\\b.*")) targetDayOfWeek = 5;
+        else if (lowerMsg.contains("saturday") || lowerMsg.matches(".*\\bsat\\b.*")) targetDayOfWeek = 6;
+        else if (lowerMsg.contains("sunday") || lowerMsg.matches(".*\\bsun\\b.*")) targetDayOfWeek = 7;
+
+        // Detect Section (e.g. "Section C", "Sec C", "Sec-C", "Section-C")
+        java.util.regex.Pattern secPattern = java.util.regex.Pattern.compile("(?i)(?:section|sec)[\\s_-]*([a-j])\\b");
+        java.util.regex.Matcher secMatcher = secPattern.matcher(message);
+        String detectedSection = null;
+        if (secMatcher.find()) {
+            detectedSection = "Sec " + secMatcher.group(1).toUpperCase();
+        }
+
+        List<TimetableSlot> allMatches = new ArrayList<>();
+        Set<UUID> seenIds = new HashSet<>();
+
+        if (detectedSection != null) {
+            List<TimetableSlot> secSlots = timetableSlotRepository.findActiveBySectionAndOptionalDay(detectedSection, targetDayOfWeek);
+            for (TimetableSlot ts : secSlots) {
+                if (seenIds.add(ts.getId())) {
+                    allMatches.add(ts);
+                }
+            }
+        }
+
+        // Also token search if no section or to find faculty/room/course matches
         String[] rawWords = message.replaceAll("[^a-zA-Z0-9\\s]", " ").split("\\s+");
         Set<String> stopWords = Set.of(
                 "the", "for", "and", "what", "when", "where", "room", "hall", "can", "does", "teach", "teaches",
                 "class", "classes", "lecture", "lectures", "have", "time", "times", "timing", "timings", "schedule",
                 "tell", "show", "with", "from", "about", "who", "why", "how", "dr", "mr", "ms", "prof", "sir", "please",
-                "give", "info", "information", "details", "any", "all", "which"
+                "give", "info", "information", "details", "any", "all", "which", "free", "slot", "slots", "available",
+                "vacant", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+                "mon", "tue", "wed", "thu", "fri", "sat", "sun", "section", "sec"
         );
 
         List<String> queryWords = Arrays.stream(rawWords)
                 .map(String::trim)
                 .filter(w -> w.length() >= 3 && !stopWords.contains(w.toLowerCase()))
                 .distinct()
-                .sorted((a, b) -> Integer.compare(b.length(), a.length())) // longest first (e.g. Kasliwal before Mon)
+                .sorted((a, b) -> Integer.compare(b.length(), a.length()))
                 .toList();
 
-        List<TimetableSlot> allMatches = new ArrayList<>();
-        Set<UUID> seenIds = new HashSet<>();
-
         for (String w : queryWords) {
-            List<TimetableSlot> found = timetableSlotRepository.searchActiveSlots(w);
+            List<TimetableSlot> found = timetableSlotRepository.searchActiveSlotsWithOptionalDay(w, targetDayOfWeek);
             for (TimetableSlot ts : found) {
                 if (seenIds.add(ts.getId())) {
                     allMatches.add(ts);
-                    if (allMatches.size() >= 30) break;
+                    if (allMatches.size() >= 40) break;
                 }
             }
-            if (allMatches.size() >= 30) break;
+            if (allMatches.size() >= 40) break;
         }
 
         if (allMatches.isEmpty()) {
@@ -232,22 +268,71 @@ public class LlmAgentPlanner {
 
         StringBuilder sb = new StringBuilder();
         String[] days = {"", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+
+        if (detectedSection != null) {
+            sb.append("### OFFICIAL SCHEDULE FOR ").append(detectedSection);
+            if (targetDayOfWeek != null) {
+                sb.append(" ON ").append(days[targetDayOfWeek].toUpperCase());
+            }
+            sb.append(":\n\n");
+        }
+
         for (TimetableSlot ts : allMatches) {
             String dayName = (ts.getDayOfWeek() >= 1 && ts.getDayOfWeek() <= 7) ? days[ts.getDayOfWeek()] : "Day " + ts.getDayOfWeek();
             String startStr = String.format("%02d:%02d", ts.getStartMinute() / 60, ts.getStartMinute() % 60);
             String endStr = String.format("%02d:%02d", ts.getEndMinute() / 60, ts.getEndMinute() % 60);
-            sb.append("- Course: ").append(ts.getCourseCode())
+            sb.append("- Academic Term: ").append(ts.getAcademicTerm() != null ? ts.getAcademicTerm() : "Semester")
+              .append(", Section: ").append(ts.getSection() != null ? ts.getSection() : "")
+              .append(", Course: ").append(ts.getCourseCode())
               .append(", Room: ").append(ts.getRoom() != null ? ts.getRoom().getRoomNumber() : "Unknown")
               .append(", Day: ").append(dayName)
-              .append(", Time: ").append(startStr).append("-").append(endStr);
+              .append(", Time: ").append(startStr).append(" - ").append(endStr);
             if (ts.getFaculty() != null && !ts.getFaculty().isBlank()) {
                 sb.append(", Faculty: ").append(ts.getFaculty());
             }
-            if (ts.getSection() != null && !ts.getSection().isBlank()) {
-                sb.append(", Section: ").append(ts.getSection());
-            }
             sb.append("\n");
         }
+
+        // If Section & Day query, explicitly append computed free time window analysis:
+        if (detectedSection != null && targetDayOfWeek != null) {
+            sb.append("\n### COMPUTED FREE TIME WINDOWS FOR ").append(detectedSection).append(" (College Operating Hours: 09:00 - 17:00):\n");
+            Map<String, List<TimetableSlot>> byTerm = new HashMap<>();
+            for (TimetableSlot ts : allMatches) {
+                if (ts.getDayOfWeek() == targetDayOfWeek && ts.getSection() != null && ts.getSection().contains(detectedSection)) {
+                    String term = ts.getAcademicTerm() != null ? ts.getAcademicTerm() : "Current Term";
+                    byTerm.computeIfAbsent(term, k -> new ArrayList<>()).add(ts);
+                }
+            }
+
+            for (Map.Entry<String, List<TimetableSlot>> entry : byTerm.entrySet()) {
+                String term = entry.getKey();
+                List<TimetableSlot> termSlots = entry.getValue();
+                termSlots.sort(Comparator.comparingInt(TimetableSlot::getStartMinute));
+
+                sb.append("\n**").append(term).append(" (").append(detectedSection).append("):**\n");
+                int currentMinute = 540; // 09:00 AM
+                for (TimetableSlot ts : termSlots) {
+                    if (ts.getStartMinute() > currentMinute) {
+                        int gap = ts.getStartMinute() - currentMinute;
+                        if (gap >= 15) {
+                            sb.append("- FREE SLOT: ")
+                              .append(String.format("%02d:%02d", currentMinute / 60, currentMinute % 60))
+                              .append(" - ")
+                              .append(String.format("%02d:%02d", ts.getStartMinute() / 60, ts.getStartMinute() % 60))
+                              .append(" (").append(gap).append(" minutes)\n");
+                        }
+                    }
+                    currentMinute = Math.max(currentMinute, ts.getEndMinute());
+                }
+                if (currentMinute < 1020) { // 17:00 PM
+                    sb.append("- FREE SLOT: ")
+                      .append(String.format("%02d:%02d", currentMinute / 60, currentMinute % 60))
+                      .append(" - 17:00 (Evening free window)\n");
+                }
+                sb.append("- FREE: After 17:00 (Post-college hours)\n");
+            }
+        }
+
         return sb.toString();
     }
 

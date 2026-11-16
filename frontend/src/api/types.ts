@@ -311,6 +311,13 @@ export const BookingSchema = z.object({
 });
 export type Booking = z.infer<typeof BookingSchema>;
 
+export const ParkingRequestItemSchema = z.object({
+  zoneId: z.string().uuid(),
+  visitorName: z.string().min(1),
+  vehicleNumber: z.string().min(1),
+});
+export type ParkingRequestItem = z.infer<typeof ParkingRequestItemSchema>;
+
 export const CreateBookingRequestSchema = z
   .object({
     title: z.string().min(3, 'Title must be at least 3 characters').max(100),
@@ -327,6 +334,7 @@ export const CreateBookingRequestSchema = z
     parkingZoneId: z.string().uuid().optional().nullable(),
     visitorName: z.string().optional().nullable(),
     vehicleNumber: z.string().optional().nullable(),
+    parkingRequests: z.array(ParkingRequestItemSchema).optional().nullable(),
   })
   .refine(
     (data) => {

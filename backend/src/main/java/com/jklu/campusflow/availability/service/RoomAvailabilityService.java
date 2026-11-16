@@ -1,10 +1,13 @@
 package com.jklu.campusflow.availability.service;
 
 import com.jklu.campusflow.availability.dto.AvailabilityResponse;
+import com.jklu.campusflow.availability.dto.AvailableRoomDto;
 import com.jklu.campusflow.availability.dto.RoomScheduleResponse;
 import com.jklu.campusflow.booking.model.BookingItem;
 import com.jklu.campusflow.booking.repository.BookingItemRepository;
+import com.jklu.campusflow.campus.model.Block;
 import com.jklu.campusflow.campus.model.Room;
+import com.jklu.campusflow.campus.repository.BlockRepository;
 import com.jklu.campusflow.campus.repository.RoomRepository;
 import com.jklu.campusflow.common.error.ResourceNotFoundException;
 import com.jklu.campusflow.timetable.model.TimetableSlot;
@@ -27,18 +30,40 @@ public class RoomAvailabilityService {
     private static final ZoneId ZONE = ZoneId.of("Asia/Kolkata");
 
     private final RoomRepository roomRepository;
+    private final BlockRepository blockRepository;
     private final TimetableSlotRepository timetableSlotRepository;
     private final BookingItemRepository bookingItemRepository;
     private final RoomAvailabilityEngine engine = new RoomAvailabilityEngine();
 
     public RoomAvailabilityService(
             RoomRepository roomRepository,
+            BlockRepository blockRepository,
             TimetableSlotRepository timetableSlotRepository,
             BookingItemRepository bookingItemRepository
     ) {
         this.roomRepository = roomRepository;
+        this.blockRepository = blockRepository;
         this.timetableSlotRepository = timetableSlotRepository;
         this.bookingItemRepository = bookingItemRepository;
+    }
+
+    public List<AvailableRoomDto> listAllActiveRooms() {
+        List<Room> rooms = roomRepository.findAllActiveWithBlock();
+        return rooms.stream().map(r -> new AvailableRoomDto(
+                r.getId(),
+                r.getRoomNumber(),
+                r.getBlock() != null ? r.getBlock().getName() : "",
+                r.getFloor(),
+                r.getCapacity(),
+                r.getType(),
+                r.getFeatures() != null ? r.getFeatures() : List.of(),
+                r.isBookableOutside(),
+                List.of()
+        )).toList();
+    }
+
+    public List<Block> listAllActiveBlocks() {
+        return blockRepository.findAllByActiveTrueOrderByNameAsc();
     }
 
     public AvailabilityResponse searchAvailability(

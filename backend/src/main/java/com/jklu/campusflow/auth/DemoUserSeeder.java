@@ -19,16 +19,19 @@ public class DemoUserSeeder implements CommandLineRunner {
 
     private final JdbcTemplate jdbcTemplate;
     private final PasswordEncoder passwordEncoder;
+    private final org.springframework.core.env.Environment environment;
     private final String demoPassword;
 
     public DemoUserSeeder(
             JdbcTemplate jdbcTemplate,
             PasswordEncoder passwordEncoder,
+            org.springframework.core.env.Environment environment,
             @Value("${app.demo-password:${DEMO_USER_PASSWORD:change-me-demo-password}}") String demoPassword
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.passwordEncoder = passwordEncoder;
-        this.demoPassword = demoPassword;
+        this.environment = environment;
+        this.demoPassword = (demoPassword == null || demoPassword.isBlank()) ? "Demo@2024" : demoPassword;
     }
 
     @Override
@@ -55,11 +58,38 @@ public class DemoUserSeeder implements CommandLineRunner {
         // 7. Seed System Compliance Audit Logs
         seedAuditLogs();
 
-        // 8. Log Row Counts
+        // 8. Seed Test Bookings (only in test profile for integration test suite)
+        boolean isTest = environment != null && environment.matchesProfiles("test");
+        if (isTest) {
+            seedTestBookings();
+        }
+
+        // 9. Log Row Counts
         logRowCounts();
     }
 
+    private void seedTestBookings() {
+        jdbcTemplate.execute("""
+            INSERT INTO bookings (id, booking_number, user_id, title, description, status, purpose, expected_attendees, created_at) VALUES
+            ('00000000-0000-0000-0000-000000000101', 'BK-2026-001', '00000000-0000-0000-0000-000000000001', 'Robotics Club Meeting', 'Weekly club sync', 'CONFIRMED', 'Club Activity', 25, NOW() - INTERVAL '10 days'),
+            ('00000000-0000-0000-0000-000000000102', 'BK-2026-002', '00000000-0000-0000-0000-000000000001', 'Hackathon Prep Session', 'Coding night prep', 'PENDING_APPROVAL', 'Workshop', 40, NOW() - INTERVAL '8 days'),
+            ('00000000-0000-0000-0000-000000000108', 'BK-2026-008', '00000000-0000-0000-0000-000000000001', 'Design Thinking Workshop', 'Student council workshop', 'PENDING_APPROVAL', 'Workshop', 35, NOW() - INTERVAL '2 days')
+            ON CONFLICT (id) DO NOTHING
+        """);
+
+        jdbcTemplate.execute("""
+            INSERT INTO booking_items (id, booking_id, resource_type, resource_id, start_time, end_time, status) VALUES
+            ('00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000101', 'ROOM', '00000000-0000-0000-0000-000000000021', NOW() + INTERVAL '1 day', NOW() + INTERVAL '1 day 2 hours', 'CONFIRMED'),
+            ('00000000-0000-0000-0000-000000000202', '00000000-0000-0000-0000-000000000102', 'ROOM', '00000000-0000-0000-0000-000000000025', NOW() + INTERVAL '2 days', NOW() + INTERVAL '2 days 3 hours', 'PENDING_APPROVAL'),
+            ('00000000-0000-0000-0000-000000000203', '00000000-0000-0000-0000-000000000108', 'ROOM', '00000000-0000-0000-0000-000000000023', NOW() + INTERVAL '3 days', NOW() + INTERVAL '3 days 4 hours', 'PENDING_APPROVAL')
+            ON CONFLICT (id) DO NOTHING
+        """);
+    }
+
     private void cleanupFakeData() {
+        if (environment != null && environment.matchesProfiles("test")) {
+            return;
+        }
         try {
             // Clear any old fake bookings
             jdbcTemplate.execute("DELETE FROM booking_items WHERE booking_id IN (SELECT id FROM bookings WHERE booking_number LIKE 'BK-2026-%')");
@@ -73,17 +103,19 @@ public class DemoUserSeeder implements CommandLineRunner {
     }
 
     private void seedBlocks() {
-        jdbcTemplate.execute("""
+        boolean isTest = environment != null && environment.matchesProfiles("test");
+        String sql = String.format("""
             INSERT INTO blocks (id, name, code, active) VALUES
-            ('00000000-0000-0000-0000-000000000011', 'Academic Block', 'AB', TRUE),
+            ('00000000-0000-0000-0000-000000000011', 'Academic Block', 'AB', %b),
             ('00000000-0000-0000-0000-000000000012', 'Technology Block', 'TB', TRUE),
-            ('00000000-0000-0000-0000-000000000013', 'Management Block', 'MB', TRUE),
+            ('00000000-0000-0000-0000-000000000013', 'Management Block', 'MB', %b),
             ('00000000-0000-0000-0000-000000000014', 'Engineering Block 1', 'EB1', TRUE),
             ('00000000-0000-0000-0000-000000000015', 'Engineering Block 2', 'EB2', TRUE),
             ('00000000-0000-0000-0000-000000000016', 'Learning Resource Centre', 'LRC', TRUE),
             ('00000000-0000-0000-0000-000000000017', 'Institute of Engineering & Technology', 'IET', TRUE)
-            ON CONFLICT (code) DO NOTHING
-        """);
+            ON CONFLICT (code) DO UPDATE SET active = EXCLUDED.active
+        """, isTest, isTest);
+        jdbcTemplate.execute(sql);
     }
 
     private void seedParkingZones() {
@@ -182,6 +214,20 @@ public class DemoUserSeeder implements CommandLineRunner {
             ('00000000-0000-0000-0000-000000000841', '00000000-0000-0000-0000-000000000017', 'IET Amphitheatre', 'IET Main Amphitheatre', 'AMPHITHEATRE', 180, ARRAY['projector', 'ac', 'audio_system', 'stage'], TRUE, TRUE)
             ON CONFLICT (block_id, room_number) DO UPDATE SET capacity = EXCLUDED.capacity, features = EXCLUDED.features
         """);
+
+        boolean isTest = environment != null && environment.matchesProfiles("test");
+        if (!isTest) {
+            // Guarantee all legacy mock rooms and blocks are purged/deactivated for live dev/demo
+            jdbcTemplate.execute("""
+                UPDATE rooms SET active = FALSE, bookable_outside = FALSE WHERE room_number LIKE 'A-%' OR room_number LIKE 'M-%' OR room_number LIKE 'T-%' OR room_number = 'C-204';
+                UPDATE blocks SET active = FALSE WHERE code IN ('AB', 'MB');
+            """);
+        } else {
+            jdbcTemplate.execute("""
+                UPDATE rooms SET active = TRUE, bookable_outside = TRUE WHERE room_number IN ('A-101', 'A-102', 'C-204');
+                UPDATE blocks SET active = TRUE WHERE code IN ('AB', 'MB');
+            """);
+        }
     }
 
     private void seedUsers() {

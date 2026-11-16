@@ -21,7 +21,6 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { SEED_BLOCKS } from '@/mocks/seedData';
 
 const AVAILABLE_FEATURES = [
   { id: 'projector', label: 'Projector' },
@@ -60,6 +59,11 @@ export function FinderPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['rooms', 'availability', searchParams],
     queryFn: () => roomsApi.searchAvailability(searchParams),
+  });
+
+  const { data: blocks = [] } = useQuery({
+    queryKey: ['rooms', 'blocks'],
+    queryFn: () => roomsApi.getBlocks(),
   });
 
   const toggleFeature = (featId: string) => {
@@ -185,9 +189,9 @@ export function FinderPage() {
                   className="mt-1.5 flex h-9 w-full rounded-md border border-border-color bg-surface px-3 py-1 text-sm text-text-body shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-azure-strong"
                 >
                   <option value="">All Academic Blocks</option>
-                  {SEED_BLOCKS.map((b) => (
-                    <option key={b.id} value={b.name.split(' ')[1]}>
-                      {b.name}
+                  {blocks.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} ({b.code})
                     </option>
                   ))}
                 </select>
