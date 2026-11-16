@@ -26,6 +26,7 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, UU
              AND (
                LOWER(ts.courseCode) LIKE LOWER(CONCAT('%', :q, '%'))
                OR (ts.faculty IS NOT NULL AND LOWER(ts.faculty) LIKE LOWER(CONCAT('%', :q, '%')))
+               OR (ts.section IS NOT NULL AND LOWER(ts.section) LIKE LOWER(CONCAT('%', :q, '%')))
                OR LOWER(r.roomNumber) LIKE LOWER(CONCAT('%', :q, '%'))
              )
            ORDER BY ts.dayOfWeek ASC, ts.startMinute ASC

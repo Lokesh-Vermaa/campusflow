@@ -197,23 +197,33 @@ public class LlmAgentPlanner {
 
     private String searchTimetableInfo(String message) {
         if (message == null || message.isBlank()) return "No timetable records queried.";
-        String[] words = message.replaceAll("[^a-zA-Z0-9\\s]", " ").split("\\s+");
+        String[] rawWords = message.replaceAll("[^a-zA-Z0-9\\s]", " ").split("\\s+");
+        Set<String> stopWords = Set.of(
+                "the", "for", "and", "what", "when", "where", "room", "hall", "can", "does", "teach", "teaches",
+                "class", "classes", "lecture", "lectures", "have", "time", "times", "timing", "timings", "schedule",
+                "tell", "show", "with", "from", "about", "who", "why", "how", "dr", "mr", "ms", "prof", "sir", "please",
+                "give", "info", "information", "details", "any", "all", "which"
+        );
+
+        List<String> queryWords = Arrays.stream(rawWords)
+                .map(String::trim)
+                .filter(w -> w.length() >= 3 && !stopWords.contains(w.toLowerCase()))
+                .distinct()
+                .sorted((a, b) -> Integer.compare(b.length(), a.length())) // longest first (e.g. Kasliwal before Mon)
+                .toList();
+
         List<TimetableSlot> allMatches = new ArrayList<>();
         Set<UUID> seenIds = new HashSet<>();
 
-        for (String w : words) {
-            if (w.length() >= 2 && !w.equalsIgnoreCase("the") && !w.equalsIgnoreCase("for") && !w.equalsIgnoreCase("and")
-                    && !w.equalsIgnoreCase("what") && !w.equalsIgnoreCase("when") && !w.equalsIgnoreCase("where")
-                    && !w.equalsIgnoreCase("room") && !w.equalsIgnoreCase("hall") && !w.equalsIgnoreCase("can")) {
-                List<TimetableSlot> found = timetableSlotRepository.searchActiveSlots(w);
-                for (TimetableSlot ts : found) {
-                    if (seenIds.add(ts.getId())) {
-                        allMatches.add(ts);
-                        if (allMatches.size() >= 12) break;
-                    }
+        for (String w : queryWords) {
+            List<TimetableSlot> found = timetableSlotRepository.searchActiveSlots(w);
+            for (TimetableSlot ts : found) {
+                if (seenIds.add(ts.getId())) {
+                    allMatches.add(ts);
+                    if (allMatches.size() >= 30) break;
                 }
             }
-            if (allMatches.size() >= 12) break;
+            if (allMatches.size() >= 30) break;
         }
 
         if (allMatches.isEmpty()) {
